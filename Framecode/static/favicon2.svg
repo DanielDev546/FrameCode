@@ -1,0 +1,12 @@
+<svg id="main-canvas" width="500" height="400" xmlns="http://www.w3.org/2000/svg">
+            <defs id="svgDefs">
+          <pattern id="bgImgPattern" patternUnits="userSpaceOnUse" x="0" y="0" width="500" height="400">
+            <image id="bgImgEl" href="" x="0" y="0" width="500" height="400" preserveAspectRatio="xMidYMid slice" opacity="1"></image>
+          </pattern>
+        </defs>
+            <rect id="bgRect" width="500" height="400" fill="none" style="pointer-events: none"></rect>
+            <g id="gridG" style="pointer-events: none"></g>
+            <g id="shapesGroup"><g transform="rotate(0,251.5,201.5)" style="cursor: move;"><rect x="33" y="18" width="437" height="367" rx="0" ry="0" fill="#000000" stroke="#00ff88" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="1"></rect></g><g transform="rotate(0,258.5,204)" style="cursor: move;"><polygon points="258.5,81 390,204 258.5,327 127,204" fill="#000000" stroke="#00ff88" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="1"></polygon></g></g>
+            <g id="selectionGroup"></g>
+            <g id="penGroup" style="pointer-events: none"></g>
+          </svg>

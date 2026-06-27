@@ -74,12 +74,14 @@
 
     <!-- CTAs + stats -->
     <div class="flex flex-wrap items-center gap-4 mb-12">
+    <a href="auth/login" class="content">
       <button
         class="font-mono text-[12px] uppercase tracking-[0.1em] px-7 py-[14px]
                bg-[#00ff88] text-black font-bold hover:brightness-110 transition-all cursor-pointer"
       >
         Launch IDE
       </button>
+      </a>
       <button
         class="font-mono text-[12px] uppercase tracking-[0.1em] px-7 py-[13px]
                border border-white/20 text-[#5a6478] hover:border-[#00d4ff] hover:text-[#00d4ff]
@@ -351,12 +353,14 @@
       </p>
 
       <div class="flex justify-center gap-3 flex-wrap relative z-10">
+       <a href="auth/signup" class="content">
         <button
           class="font-mono text-[12px] uppercase tracking-[0.1em] px-7 py-[14px]
                  bg-[#00ff88] text-black font-bold hover:brightness-110 transition-all cursor-pointer"
         >
           Start Free — No card required
         </button>
+       </a>
         <button
           class="font-mono text-[12px] uppercase tracking-[0.1em] px-7 py-[13px]
                  border border-white/20 text-[#5a6478] hover:border-[#00d4ff] hover:text-[#00d4ff]
