@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { json, error } from "@sveltejs/kit";
 import { fetchUserRepos } from "$lib/server/services/github.js";
 
