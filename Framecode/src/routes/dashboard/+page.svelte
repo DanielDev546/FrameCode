@@ -1,4 +1,11 @@
-<script>
+<script lang="ts">
+  import CreateProjectModal from '$lib/components/CreateProjectModal.svelte';
+
+    let showCreateModal = $state(false);
+
+
+  import { onMount } from 'svelte'
+
   let { data } = $props()
 
   let activeNav = $state('dashboard')
@@ -11,21 +18,27 @@
   let repos        = $state([])
   let reposLoading = $state(false)
 
-  $effect(() => {
+  onMount(() => {
     loadRepos()
   })
 
-  async function loadRepos() {
-    reposLoading = true
-    try {
-      const res = await fetch('/api/github/repos')
-      if (res.ok) repos = await res.json()
-    } catch (e) {
-      console.error('repos failed', e)
-    } finally {
-      reposLoading = false
+ async function loadRepos() {
+  reposLoading = true
+  try {
+    const res = await fetch('/api/github/repos')
+    console.log('repos status:', res.status)
+    if (res.ok) {
+      const data = await res.json()
+      console.log('repos data:', data)
+      repos = data
+      console.log('repos state after set:', repos)
     }
+  } catch (e) {
+    console.error('repos failed', e)
+  } finally {
+    reposLoading = false
   }
+}
 
   async function importRepo(repo) {
     const res = await fetch('/api/github/import', {
@@ -179,7 +192,8 @@
             <h1 class="font-display text-[26px] font-bold tracking-[-0.5px] leading-none">
             Hey Dev<span class="text-[#00ff88]">Lion</span>.
           </div>
-          <button class="font-mono text-[11px] uppercase tracking-[0.1em] px-4 py-[8px] border border-white/[0.1] text-[#5a6478] hover:border-[#00ff88]/40 hover:text-[#00ff88] transition-all cursor-pointer">
+        <button onclick={() => showCreateModal = true}
+           class="font-mono text-[11px] uppercase tracking-[0.1em] px-4 py-[8px] border border-white/[0.1] text-[#5a6478] hover:border-[#00ff88]/40 hover:text-[#00ff88] transition-all cursor-pointer">
             + New Project
           </button>
         </div>
@@ -270,6 +284,7 @@
     <span class="inline-block w-[6px] h-[11px] bg-[#3a4154] animate-[blink_1.1s_step-end_infinite]"></span>
   </div>
 </div>
+</div>
 
           <!-- RIGHT -->
           <div class="flex flex-col gap-5">
@@ -321,6 +336,8 @@
                 </button>
               </div>
             </div>
+
+            <CreateProjectModal bind:open={showCreateModal} />
 
        <div>
   <p class="font-mono text-[9px] text-[#3a4154] uppercase tracking-[0.25em] mb-3">// Repos</p>
