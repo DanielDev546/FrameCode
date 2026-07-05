@@ -2,15 +2,15 @@
   import RepoExplorer from '$lib/components/RepoExplorer.svelte';
   import CodeEditor from '$lib/components/CodeEditor.svelte';
 
-  // Pass your loaded repos in from wherever the dashboard already gets them.
-  export let repos: { name: string; owner: string; defaultBranch: string }[] = [];
-
+  type Repo = { name: string; owner: string; defaultBranch: string };
   type OpenFile = { owner: string; repo: string; path: string; ref: string };
 
-  let activeFile: OpenFile | null = null;
-  let fileContent = '';
-  let dirty = false;
-  let loadingFile = false;
+  let { repos = [] }: { repos?: Repo[] } = $props();
+
+  let activeFile = $state<OpenFile | null>(null);
+  let fileContent = $state('');
+  let dirty = $state(false);
+  let loadingFile = $state(false);
 
   async function openFile(payload: OpenFile) {
     loadingFile = true;
@@ -30,8 +30,8 @@
     }
   }
 
-  function handleChange(e: CustomEvent<string>) {
-    fileContent = e.detail;
+  function handleChange(newContent: string) {
+    fileContent = newContent;
     dirty = true;
   }
 </script>
@@ -49,7 +49,7 @@
         <span>{activeFile.path}</span>
         {#if dirty}<span class="dirty">●</span>{/if}
       </div>
-      <CodeEditor value={fileContent} filename={activeFile.path} on:change={handleChange} />
+      <CodeEditor value={fileContent} filename={activeFile.path} onChange={handleChange} />
     {:else}
       <p class="status">Select a file from the tree to start editing</p>
     {/if}

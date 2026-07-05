@@ -1,18 +1,23 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { EditorState } from '@codemirror/state';
   import { EditorView, basicSetup } from 'codemirror';
-  import { oneDark } from '@codemirror/theme-one-dark';
+  import { framecodeCM } from '$lib/editor/framecodeTheme';
   import { languageForFile } from '$lib/utils/languageForFile';
 
-  // Initial content for the file being opened. This is only read when the
-  // editor is (re)created — after that, CodeMirror owns the text, so don't
-  // rely on `value` to reactively push updates into an already-open editor.
-  export let value = '';
-  export let filename = '';
-  export let readOnly = false;
-
-  const dispatch = createEventDispatcher<{ change: string }>();
+  // `value` only seeds the doc when the editor is (re)created — CodeMirror
+  // owns the text after that, so don't rely on it to push live updates in.
+  let {
+    value = '',
+    filename = '',
+    readOnly = false,
+    onChange = () => {}
+  }: {
+    value?: string;
+    filename?: string;
+    readOnly?: boolean;
+    onChange?: (content: string) => void;
+  } = $props();
 
   let container: HTMLDivElement;
   let view: EditorView | null = null;
@@ -27,12 +32,12 @@
       doc: value,
       extensions: [
         basicSetup,
-        oneDark,
+        ...framecodeCM,
         ...(language ? [language] : []),
         EditorView.editable.of(!readOnly),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            dispatch('change', update.state.doc.toString());
+            onChange(update.state.doc.toString());
           }
         })
       ]
@@ -44,12 +49,12 @@
 
   onMount(createEditor);
 
-  // Re-creates the editor when a *different* file is opened (new filename).
-  // Simpler than swapping language extensions live via Compartments, and
-  // fine for a "click a file in the tree, it opens" workflow.
-  $: if (view && filename && filename !== currentFilename) {
-    createEditor();
-  }
+  // Re-creates the editor when a *different* file is opened.
+  $effect(() => {
+    if (view && filename && filename !== currentFilename) {
+      createEditor();
+    }
+  });
 
   onDestroy(() => view?.destroy());
 </script>

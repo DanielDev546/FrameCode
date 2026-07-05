@@ -1,22 +1,31 @@
-<script lang="ts">
+<script lang="ts" module>
   export type Node = {
     name: string;
     path: string;
     type: 'blob' | 'tree';
     children: Node[];
   };
+</script>
 
-  export let node: Node;
-  export let expanded: Set<string>;
-  export let onOpenFile: (node: Node) => void;
-  export let onToggle: (path: string) => void;
+<script lang="ts">
+  let {
+    node,
+    expanded,
+    onOpenFile,
+    onToggle
+  }: {
+    node: Node;
+    expanded: Set<string>;
+    onOpenFile: (node: Node) => void;
+    onToggle: (path: string) => void;
+  } = $props();
 
-  $: isOpen = expanded.has(node.path);
+  let isOpen = $derived(expanded.has(node.path));
 </script>
 
 <li>
   {#if node.type === 'tree'}
-    <button class="row folder" on:click={() => onToggle(node.path)}>
+    <button class="row folder" onclick={() => onToggle(node.path)}>
       <span class="icon">{isOpen ? '▾' : '▸'}</span>
       {node.name}
     </button>
@@ -28,7 +37,7 @@
       </ul>
     {/if}
   {:else}
-    <button class="row file" on:click={() => onOpenFile(node)}>
+    <button class="row file" onclick={() => onOpenFile(node)}>
       <span class="icon">·</span>
       {node.name}
     </button>

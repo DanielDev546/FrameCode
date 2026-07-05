@@ -3,24 +3,21 @@
 
   type Repo = { name: string; owner: string; defaultBranch: string };
   type FlatEntry = { path: string; type: string; sha: string };
+  type OpenFilePayload = { owner: string; repo: string; path: string; ref: string };
 
-  // Pass this in from your dashboard — you already have repos loaded,
-  // just map them to { name, owner, defaultBranch } shape.
-  export let repos: Repo[] = [];
+  let {
+    repos = [],
+    onOpenFile = () => {}
+  }: {
+    repos?: Repo[];
+    onOpenFile?: (payload: OpenFilePayload) => void;
+  } = $props();
 
-  // Fired when a file is clicked, so your IDE page/store can load it into the editor.
-  export let onOpenFile: (payload: {
-    owner: string;
-    repo: string;
-    path: string;
-    ref: string;
-  }) => void = () => {};
-
-  let selectedRepo: Repo | null = null;
-  let flatTree: FlatEntry[] = [];
-  let loading = false;
-  let errorMsg = '';
-  let expanded = new Set<string>();
+  let selectedRepo = $state<Repo | null>(null);
+  let flatTree = $state<FlatEntry[]>([]);
+  let loading = $state(false);
+  let errorMsg = $state('');
+  let expanded = $state<Set<string>>(new Set());
 
   function buildTree(flat: FlatEntry[]): Node[] {
     const root: Node[] = [];
@@ -52,7 +49,7 @@
     return root;
   }
 
-  $: nodes = buildTree(flatTree);
+  let nodes = $derived(buildTree(flatTree));
 
   async function selectRepo(name: string) {
     const repo = repos.find((r) => r.name === name) ?? null;
@@ -100,7 +97,7 @@
 <div class="explorer">
   <select
     class="repo-select"
-    on:change={(e) => selectRepo(e.currentTarget.value)}
+    onchange={(e) => selectRepo(e.currentTarget.value)}
   >
     <option value="">Select a repo…</option>
     {#each repos as repo}
