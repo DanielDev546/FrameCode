@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   import CreateProjectModal from '$lib/components/CreateProjectModal.svelte';
 
     let showCreateModal = $state(false);
@@ -37,6 +37,16 @@
     console.error('repos failed', e)
   } finally {
     reposLoading = false
+  }
+}
+
+//delete projects function
+async function deleteProject(id) {
+  const res = await fetch(`/api/projects/${id}`, {
+    method: 'DELETE',
+  })
+  if (res.ok) {
+    projects = projects.filter(p => p.id !== id)
   }
 }
 
@@ -251,14 +261,36 @@
          style="color:{p.status==='live'?'#00ff88':p.status==='paused'?'#3a4154':'#5a6478'}">
         {p.status}
       </p>
-      <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <a href="/ide" class="font-mono text-[9px] px-2 py-1 border border-white/[0.08] text-[#5a6478] hover:text-[#00ff88] hover:border-[#00ff88]/20 transition-all no-underline">IDE</a>
-        {#if p.repoUrl}
-          <a href={p.repoUrl} target="_blank" class="font-mono text-[9px] px-2 py-1 border border-white/[0.08] text-[#5a6478] hover:text-[#e8edf5] transition-all no-underline">↗</a>
-        {:else}
-          <button class="font-mono text-[9px] px-2 py-1 border border-white/[0.08] text-[#5a6478] hover:text-[#00d4ff] transition-all">Push →</button>
-        {/if}
-      </div>
+   <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+  <a href="/ide"
+     class="font-mono text-[9px] px-2 py-1 border border-white/[0.08]
+            text-[#5a6478] hover:text-[#00ff88] hover:border-[#00ff88]/20
+            transition-all no-underline">
+    IDE
+  </a>
+  {#if p.repoUrl}
+    <a href={p.repoUrl} target="_blank"
+       class="font-mono text-[9px] px-2 py-1 border border-white/[0.08]
+              text-[#5a6478] hover:text-[#e8edf5] transition-all no-underline">
+      ↗
+    </a>
+  {:else}
+    <button
+      class="font-mono text-[9px] px-2 py-1 border border-white/[0.08]
+             text-[#5a6478] hover:text-[#00d4ff] transition-all">
+      Push →
+    </button>
+  {/if}
+  <!-- Delete button -->
+  <button
+    onclick={() => deleteProject(p.id)}
+    class="font-mono text-[9px] px-2 py-1 border border-white/[0.08]
+           text-[#5a6478] hover:text-[#ff4f4f] hover:border-[#ff4f4f]/20
+           transition-all"
+  >
+    ✕
+  </button>
+</div>
     </div>
   {/each}
 {/if}
@@ -293,16 +325,19 @@
             <div>
               <p class="font-mono text-[9px] text-[#3a4154] uppercase tracking-[0.25em] mb-3">// Actions</p>
               <div class="flex flex-col border border-white/[0.06]" style="gap:1px;background:rgba(255,255,255,0.06)">
-                {#each [
-                  'New Project',
-                  'Browse Templates',
-                  'Run AI Meter',
-                  'Sync GitHub',
-                ] as action}
-                  <button class="bg-[#070b12] px-4 py-[10px] text-left font-mono text-[11px] text-[#3a4154] hover:text-[#e8edf5] hover:bg-white/[0.03] transition-all flex items-center gap-3">
-                    <span class="text-[#00ff88]">❯</span>{action}
-                  </button>
-                {/each}
+          {#each [
+  { label: 'New Project',      action: () => showCreateModal = true },
+  { label: 'Browse Templates', action: () => window.location.href = '/templates' },
+  { label: 'Run AI Meter',     action: () => window.location.href = '/meter' },
+  { label: 'Sync GitHub',      action: () => loadRepos() },
+] as item}
+  <button
+    onclick={item.action}
+    class="bg-[#070b12] px-4 py-[10px] text-left font-mono text-[11px] text-[#3a4154] hover:text-[#e8edf5] hover:bg-white/[0.03] transition-all flex items-center gap-3"
+  >
+    <span class="text-[#00ff88]">❯</span>{item.label}
+  </button>
+{/each}
               </div>
             </div>
 
@@ -336,8 +371,6 @@
                 </button>
               </div>
             </div>
-
-            <CreateProjectModal bind:open={showCreateModal} />
 
        <div>
   <p class="font-mono text-[9px] text-[#3a4154] uppercase tracking-[0.25em] mb-3">// Repos</p>
@@ -377,4 +410,14 @@
       </div>
     </main>
   </div>
+
+    <CreateProjectModal
+    open={showCreateModal}
+    onClose={() => showCreateModal = false}
+    onCreated={(project) => {
+      projects = [project, ...projects]
+      showCreateModal = false
+    }}
+  />
+
 </div>
