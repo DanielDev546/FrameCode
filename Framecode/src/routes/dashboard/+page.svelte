@@ -262,7 +262,7 @@ async function deleteProject(id) {
         {p.status}
       </p>
    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-  <a href="/ide"
+  <a href="/ide/{p.id}"
      class="font-mono text-[9px] px-2 py-1 border border-white/[0.08]
             text-[#5a6478] hover:text-[#00ff88] hover:border-[#00ff88]/20
             transition-all no-underline">
