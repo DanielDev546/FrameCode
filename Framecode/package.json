@@ -43,6 +43,7 @@
     "@libsql/client": "^0.17.3",
     "@tailwindcss/vite": "^4.2.4",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.11.1",
     "codemirror": "^6.0.2",
     "drizzle-orm": "^0.45.2",
     "jsonwebtoken": "^9.0.3",
