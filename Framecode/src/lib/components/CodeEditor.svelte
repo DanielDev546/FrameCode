@@ -7,6 +7,9 @@
 
   // `value` only seeds the doc when the editor is (re)created — CodeMirror
   // owns the text after that, so don't rely on it to push live updates in.
+
+
+
   let {
     value = '',
     filename = '',

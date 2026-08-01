@@ -1,19 +1,9 @@
 // @ts-nocheck
 import { json, error } from "@sveltejs/kit";
+import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db/index.js";
 import { projects, activityLog } from "$lib/server/db/schema.js";
-
-/** @type {import('./$types').RequestHandler} */
-export async function GET({ locals }) {
-  if (!locals.user) error(401, "Unauthorized");
-
-  const userProjects = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.userId, locals.user.id));
-
-  return json(userProjects);
-}
+import { getScaffold } from "$lib/server/scaffolds.js";
 
 export async function POST({ request, locals }) {
   if (!locals.user) error(401, "Unauthorized");
@@ -30,25 +20,33 @@ export async function POST({ request, locals }) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-");
 
+  // Generate scaffold files
+  const scaffoldFiles = getScaffold(
+    framework ?? "None",
+    language ?? "JavaScript",
+    name.trim(),
+  );
+
   const created = await db
     .insert(projects)
     .values({
       userId: locals.user.id,
       name: name.trim(),
       slug,
-      framework: `${language} · ${framework}`,
+      framework: `${language ?? "JS"} · ${framework ?? "None"}`,
       status: "draft",
+      // Store scaffold as JSON in meterData temporarily
+      meterData: JSON.stringify({ scaffold: scaffoldFiles }),
     })
     .returning();
 
   const project = created[0];
 
-  // Log activity
   await db.insert(activityLog).values({
     userId: locals.user.id,
     projectId: project.id,
     type: "project_created",
-    message: `Created project "${project.name}"`,
+    message: `Created ${framework} project "${name.trim()}"`,
   });
 
   return json(project);

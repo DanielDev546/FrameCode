@@ -3,7 +3,10 @@
   // renders the top nav and left MENU sidebar (same as your dashboard
   // and IDE pages) — this file is just the main content area.
 
+  import DashboardLayout from "$lib/layout/DashboardLayout.svelte";
+
   let { data } = $props();
+  
 
   let search = $state('');
   let activeCategory = $state('all');
@@ -40,6 +43,12 @@
     console.log('use template', t.slug);
   }
 </script>
+
+  <!-- ── SIDEBAR ── -->
+ <DashboardLayout
+    active="templates"
+    {data}
+>
 
 <div class="p-6">
   <p class="font-mono text-[10px] tracking-[0.2em] text-[#3a4154] mb-1">// TEMPLATE LIBRARY</p>
@@ -114,3 +123,5 @@
     </div>
   {/if}
 </div>
+
+</DashboardLayout>

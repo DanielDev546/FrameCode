@@ -1,6 +1,38 @@
 <script lang="ts">
   // Svelte 5 runes — no imports needed for $state/$derived
 
+  import { fly, fade, scale } from 'svelte/transition';
+
+let showTag = $state(false);
+let showTitle = $state(false);
+let showDescription = $state(false);
+let showButtons = $state(false);
+let showTerminal = $state(false);
+
+$effect(() => {
+    setTimeout(() => showTag = true, 150);
+    setTimeout(() => showTitle = true, 350);
+    setTimeout(() => showDescription = true, 750);
+    setTimeout(() => showButtons = true, 1000);
+    setTimeout(() => showTerminal = true, 1300);
+});
+
+let terminalStep = $state(0);
+
+$effect(() => {
+
+setTimeout(() => terminalStep = 1,1500);
+
+setTimeout(() => terminalStep = 2,1800);
+
+setTimeout(() => terminalStep = 3,2100);
+
+setTimeout(() => terminalStep = 4,2400);
+
+setTimeout(() => terminalStep = 5,2700);
+
+});
+
   // ── AI Meter bars ──────────────────────────────────────────────
   const meterBars = [
     { label: 'CTA Visibility',    value: 94, color: 'green' },
@@ -52,25 +84,57 @@
   <section class="pt-20 pb-16">
 
     <!-- Tag -->
-    <div class="flex items-center gap-2 font-mono text-[11px] text-[#00ff88] uppercase tracking-[0.2em] mb-6">
-      <span class="text-[#5a6478]">&gt; </span>
+{#if showTag}
+<div
+    transition:fly={{ y: 15, duration: 500 }}
+    class="flex items-center gap-2 ...font-mono text-[11px] text-[#00ff88] uppercase tracking-[0.2em] mb-6"
+>      <span class="text-[#5a6478]">&gt; </span>
       <span class="inline-block w-[6px] h-[6px] rounded-full bg-[#00ff88] animate-pulse"></span>
-      Full-Stack Engineering Platform — v2.4.1
+      Full-Stack Engineering Platform — v1.1.0
     </div>
+{/if}
 
-    <!-- Headline -->
-    <h1 class="font-display text-[clamp(52px,7vw,88px)] font-extrabold leading-[0.95] tracking-[-3px] mb-7">
-      <span class="block text-[#e8edf5]">Build without</span>
-      <span class="block" style="-webkit-text-stroke: 1px rgba(255,255,255,0.2); color: transparent;">
-        starting from <span class="text-[#00ff88]" style="-webkit-text-stroke: 0;">zero.</span>
+
+  <!-- Headline -->
+<h1 class="font-display text-[clamp(52px,7vw,88px)] font-extrabold leading-[0.95] tracking-[-3px] mb-7">
+
+  {#if showTitle}
+    <span
+      in:fly={{ y: 20, duration: 600 }}
+      class="block text-[#e8edf5]"
+    >
+      Build without
+    </span>
+  {/if}
+
+  {#if showTitle}
+    <span
+      in:fly={{ y: 30, duration: 650, delay: 150 }}
+      class="block"
+      style="-webkit-text-stroke: 1px rgba(255,255,255,0.2); color: transparent;"
+    >
+      starting from
+
+      <span
+        in:scale={{ duration: 500, delay: 350 }}
+        class="text-[#00ff88]"
+        style="-webkit-text-stroke: 0;"
+      >
+        zero.
       </span>
-    </h1>
+    </span>
+  {/if}
 
-    <!-- Subheading -->
-    <p class="text-[16px] text-[#5a6478] leading-[1.7] max-w-[560px] mb-11 font-light">
-      Production-ready landing pages, dashboard templates, AI conversion tools,
-      and GitHub-native fork workflows — all in one terminal-grade IDE.
-    </p>
+</h1>
+  {#if showDescription}
+  <p
+    in:fly={{ y: 20, duration: 500 }}
+    class="text-[16px] text-[#5a6478] leading-[1.7] max-w-[560px] mb-11 font-light"
+  >
+    Production-ready landing pages, dashboard templates, AI conversion tools,
+    and GitHub-native fork workflows — all in one terminal-grade IDE.
+  </p>
+{/if}
 
     <!-- CTAs + stats -->
     <div class="flex flex-wrap items-center gap-4 mb-12">
@@ -107,22 +171,79 @@
         <span class="font-mono text-[11px] text-[#5a6478] mx-auto">framecode — bash — 80×24</span>
       </div>
       <!-- Body -->
-      <div class="p-6 font-mono text-[12px] leading-[1.9]">
-        <div class="flex gap-3">
-          <span class="text-[#00ff88] shrink-0">❯</span>
-          <span class="text-[#e8edf5]">npx create-framecode@latest my-app --template=saas-dashboard</span>
-        </div>
-        <div class="flex gap-3 text-[#00d4ff]"><span class="shrink-0 text-transparent">❯</span> ◆ Fetching template registry...</div>
-        <div class="flex gap-3 text-[#00ff88]"><span class="shrink-0 text-transparent">❯</span> ✓ Template resolved: saas-dashboard v3.1.2</div>
-        <div class="flex gap-3 text-[#00ff88]"><span class="shrink-0 text-transparent">❯</span> ✓ GitHub fork linked → github.com/you/my-app</div>
-        <div class="flex gap-3 text-[#00ff88]"><span class="shrink-0 text-transparent">❯</span> ✓ AI conversion meter calibrated (baseline: 2.3%)</div>
-        <div class="flex gap-3 text-[#5a6478]"><span class="shrink-0 text-transparent">❯</span>   → Starting dev server on http://localhost:3000</div>
-        <div class="flex items-center gap-3 mt-1">
-          <span class="text-[#00ff88]">❯</span>
-          <span class="inline-block w-[8px] h-[14px] bg-[#5a6478] animate-[blink_1.1s_step-end_infinite]"></span>
-        </div>
-      </div>
+     <div class="p-6 font-mono text-[12px] leading-[1.9]">
+
+  <!-- Command -->
+  <div class="flex gap-3">
+    <span class="text-[#00ff88] shrink-0">❯</span>
+    <span class="text-[#e8edf5]">
+      npx create-framecode@latest my-app --template=saas-dashboard
+    </span>
+  </div>
+
+  {#if terminalStep >= 1}
+    <div
+      transition:fade={{ duration: 250 }}
+      class="flex gap-3 text-[#00d4ff]"
+    >
+      <span class="shrink-0 text-transparent">❯</span>
+      ◆ Fetching template registry...
     </div>
+  {/if}
+
+  {#if terminalStep >= 2}
+    <div
+      transition:fade={{ duration: 250 }}
+      class="flex gap-3 text-[#00ff88]"
+    >
+      <span class="shrink-0 text-transparent">❯</span>
+      ✓ Template resolved: saas-dashboard v3.1.2
+    </div>
+  {/if}
+
+  {#if terminalStep >= 3}
+    <div
+      transition:fade={{ duration: 250 }}
+      class="flex gap-3 text-[#00ff88]"
+    >
+      <span class="shrink-0 text-transparent">❯</span>
+      ✓ GitHub fork linked → github.com/you/my-app
+    </div>
+  {/if}
+
+  {#if terminalStep >= 4}
+    <div
+      transition:fade={{ duration: 250 }}
+      class="flex gap-3 text-[#00ff88]"
+    >
+      <span class="shrink-0 text-transparent">❯</span>
+      ✓ AI conversion meter calibrated (baseline: 2.3%)
+    </div>
+  {/if}
+
+  {#if terminalStep >= 5}
+    <div
+      transition:fade={{ duration: 250 }}
+      class="flex gap-3 text-[#5a6478]"
+    >
+      <span class="shrink-0 text-transparent">❯</span>
+      → Starting dev server on http://localhost:3000
+    </div>
+  {/if}
+
+  {#if terminalStep >= 5}
+    <div
+      transition:fade={{ duration: 250 }}
+      class="flex items-center gap-3 mt-1"
+    >
+      <span class="text-[#00ff88]">❯</span>
+      <span
+        class="inline-block w-[8px] h-[14px] bg-[#5a6478] animate-[blink_1.1s_step-end_infinite]"
+      ></span>
+    </div>
+  {/if}
+
+</div>
   </section>
 
   <hr class="border-none border-t border-white/[0.08] my-0" />

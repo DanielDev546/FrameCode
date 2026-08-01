@@ -34,6 +34,55 @@
     fileContent = newContent;
     dirty = true;
   }
+
+   // ── Save state ─────────────────────────────────
+let saveStatus  = $state('idle')   // 'idle' | 'saving' | 'saved' | 'error'
+let autoSaveTimer = null
+
+// ── Auto-save (2s debounce) ────────────────────
+function triggerAutoSave(path) {
+  clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(() => {
+    saveFile(path)
+  }, 2000)
+}
+
+// ── Save file ──────────────────────────────────
+async function saveFile(path) {
+  const content = fileCache[path]
+  if (content === undefined || !path) return
+
+  saveStatus = 'saving'
+
+  try {
+    const res = await fetch('/api/ide/save', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: project.id,
+        path,
+        content,
+      }),
+    })
+
+    if (res.ok) {
+      saveStatus = 'saved'
+      // Mark tab as clean
+      openTabs = openTabs.map(t =>
+        t.path === path ? { ...t, dirty: false } : t
+      )
+      // Reset to idle after 2s
+      setTimeout(() => saveStatus = 'idle', 2000)
+    } else {
+      saveStatus = 'error'
+      setTimeout(() => saveStatus = 'idle', 3000)
+    }
+  } catch {
+    saveStatus = 'error'
+    setTimeout(() => saveStatus = 'idle', 3000)
+  }
+}
+
 </script>
 
 <div class="ide">

@@ -1,195 +1,115 @@
-<script>
-  import CreateProjectModal from '$lib/components/CreateProjectModal.svelte';
+<script lang="ts">
+import { onMount } from "svelte";
 
-    let showCreateModal = $state(false);
+import DashboardLayout from "$lib/layout/DashboardLayout.svelte";
+import CreateProjectModal from "$lib/components/CreateProjectModal.svelte";
 
+let { data } = $props();
 
-  import { onMount } from 'svelte'
+let showCreateModal = false;
 
-  let { data } = $props()
+// ── Real data from DB ──────────────────────────
+let projects = $state(data.projects ?? []);
+let activity = $state(data.activity ?? []);
 
-  let activeNav = $state('dashboard')
+// ── GitHub repos ───────────────────────────────
+let repos = $state([]);
+let reposLoading = $state(false);
 
-  // ── Real data from DB ──────────────────────────
-  let projects = $state(data.projects ?? [])
-  let activity = $state(data.activity ?? [])
+onMount(() => {
+    loadRepos();
+});
 
-  // ── GitHub repos ───────────────────────────────
-  let repos        = $state([])
-  let reposLoading = $state(false)
+async function loadRepos() {
+    reposLoading = true;
 
-  onMount(() => {
-    loadRepos()
-  })
+    try {
+        const res = await fetch("/api/github/repos");
 
- async function loadRepos() {
-  reposLoading = true
-  try {
-    const res = await fetch('/api/github/repos')
-    console.log('repos status:', res.status)
-    if (res.ok) {
-      const data = await res.json()
-      console.log('repos data:', data)
-      repos = data
-      console.log('repos state after set:', repos)
+        if (res.ok) {
+            repos = await res.json();
+        }
+    } catch (err) {
+        console.error(err);
+    } finally {
+        reposLoading = false;
     }
-  } catch (e) {
-    console.error('repos failed', e)
-  } finally {
-    reposLoading = false
-  }
 }
 
-//delete projects function
-async function deleteProject(id) {
-  const res = await fetch(`/api/projects/${id}`, {
-    method: 'DELETE',
-  })
-  if (res.ok) {
-    projects = projects.filter(p => p.id !== id)
-  }
+// Delete project
+async function deleteProject(id: string) {
+    const res = await fetch(`/api/projects/${id}`, {
+        method: "DELETE"
+    });
+
+    if (res.ok) {
+        projects = projects.filter((p) => p.id !== id);
+    }
 }
 
-  async function importRepo(repo) {
-    const res = await fetch('/api/github/import', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(repo),
-    })
+// Import GitHub repo
+async function importRepo(repo) {
+    const res = await fetch("/api/github/import", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(repo)
+    });
+
     if (res.ok) {
-      const project = await res.json()
-      projects = [project, ...projects]
+        const project = await res.json();
+        projects = [project, ...projects];
     }
-  }
+}
 
-  const nav = [
-    { id: 'dashboard', label: 'Dashboard'  },
-    { id: 'templates', label: 'Templates'  },
-    { id: 'ide',       label: 'IDE'        },
-    { id: 'meter',     label: 'AI Meter'   },
-    { id: 'fork',      label: 'ForkTools'  },
-    { id: 'design',    label: 'Design Hub' },
-  ]
+// Dashboard stats
+let stats = $derived([
+    {
+        label: "Projects",
+        val: String(projects.length),
+        sub: `${projects.filter((p) => p.status === "live").length} live`
+    },
+    {
+        label: "Forked",
+        val: String(projects.filter((p) => p.templateId).length),
+        sub: "templates"
+    },
+    {
+        label: "Avg Score",
+        val: projects.length
+            ? String(
+                  Math.round(
+                      projects.reduce(
+                          (a, p) => a + (p.meterScore ?? 0),
+                          0
+                      ) / projects.length
+                  )
+              )
+            : "0",
+        sub: "AI Meter"
+    },
+    {
+        label: "Repos",
+        val: String(projects.filter((p) => p.repoUrl).length),
+        sub: "linked"
+    }
+]);
 
-  // ── Stat cards computed from real data ─────────
-  let stats = $derived([
-    { label: 'Projects',  val: String(projects.length),                                                                    sub: `${projects.filter(p => p.status === 'live').length} live`   },
-    { label: 'Forked',    val: String(projects.filter(p => p.templateId).length),                                         sub: 'templates'                                                   },
-    { label: 'Avg Score', val: projects.length ? String(Math.round(projects.reduce((a, p) => a + (p.meterScore ?? 0), 0) / projects.length)) : '0', sub: 'AI meter'              },
-    { label: 'Repos',     val: String(projects.filter(p => p.repoUrl).length),                                            sub: 'linked'                                                      },
-  ])
-
-  function sc(score) {
-    if (score >= 80) return '#00ff88'
-    if (score >= 60) return '#e8edf5'
-    return '#5a6478'
-  }
-
-  function lc(item) {
-    if (item.ok === true)  return '#00ff88'
-    if (item.ok === false) return '#ff4f4f'
-    return '#5a6478'
-  }
-
-  function li(item) {
-    if (item.ok === true)  return '✓'
-    if (item.ok === false) return '✕'
-    return '◆'
-  }
+function sc(score: number) {
+    if (score >= 80) return "#00ff88";
+    if (score >= 60) return "#e8edf5";
+    return "#5a6478";
+}
 </script>
 
-<div class="flex h-screen bg-[#070b12] text-[#e8edf5] overflow-hidden font-sans">
+<DashboardLayout
+    active="dashboard"
+    {data}
+>
 
-  <!-- grid -->
-  <div class="fixed inset-0 pointer-events-none z-0"
-    style="background-image:linear-gradient(rgba(0,255,136,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.02) 1px,transparent 1px);background-size:40px 40px;">
-  </div>
 
-  <!-- ── SIDEBAR ── -->
-  <aside class="relative z-10 w-[200px] shrink-0 border-r border-white/[0.05] flex flex-col bg-[#070b12]">
 
-    <!-- logo -->
-    <div class="px-5 py-5 border-b border-white/[0.05]">
-      <span class="font-mono text-[13px] font-bold">
-        <span class="text-[#3a4154]">[</span><span class="text-[#00ff88]">FC</span><span class="text-[#3a4154]">]</span>
-        <span class="text-[#e8edf5] ml-1">FrameCode</span>
-      </span>
-    </div>
-
-  <nav class="flex-1 py-6 flex flex-col">
-  <p class="font-mono text-[9px] text-[#3a4154] uppercase tracking-[0.3em] px-5 mb-4">
-    Menu
-  </p>
-
-  {#each nav as item}
-    {#if item.id === 'ide' || item.id === 'templates' || item.id === 'meter' || item.id === 'fork' || item.id === 'design'}
-      <a
-        href={`/${item.id}`}
-        onclick={() => (activeNav = item.id)}
-        class="w-full text-left px-5 py-[9px] font-mono text-[11px] tracking-wide transition-all
-               flex items-center justify-between no-underline
-               {activeNav === item.id
-                 ? 'text-[#e8edf5] bg-white/[0.04] border-l border-[#00ff88]'
-                 : 'text-[#3a4154] hover:text-[#5a6478] border-l border-transparent'}"
-      >
-        {item.label}
-
-        {#if activeNav === item.id}
-          <span class="w-[3px] h-[3px] rounded-full bg-[#00ff88]"></span>
-        {/if}
-      </a>
-    {:else}
-      <button
-        onclick={() => (activeNav = item.id)}
-        class="w-full text-left px-5 py-[9px] font-mono text-[11px] tracking-wide transition-all
-               flex items-center justify-between
-               {activeNav === item.id
-                 ? 'text-[#e8edf5] bg-white/[0.04] border-l border-[#00ff88]'
-                 : 'text-[#3a4154] hover:text-[#5a6478] border-l border-transparent'}"
-      >
-        {item.label}
-
-        {#if activeNav === item.id}
-          <span class="w-[3px] h-[3px] rounded-full bg-[#00ff88]"></span>
-        {/if}
-      </button>
-    {/if}
-  {/each}
-</nav>
-    <!-- bottom -->
-    <div class="border-t border-white/[0.05] py-4">
-      <button class="w-full text-left px-5 py-[9px] font-mono text-[11px] text-[#3a4154] hover:text-[#5a6478] transition-colors">
-        Settings
-      </button>
-
-      <form method="POST" action="/auth/logout">
-        <button
-         type="submit" 
-          class="w-full text-left px-5 py-[9px] font-mono text-[11px] text-[#3a4154] hover:text-[#ff4f4f] transition-colors">
-           Sign out
-        </button>
-      </form>
-    
-    </div>
-  </aside>
-
-  <!-- ── MAIN ── -->
-  <div class="relative z-10 flex-1 flex flex-col overflow-hidden">
-
-    <!-- topbar -->
-    <header class="shrink-0 h-[52px] border-b border-white/[0.05] flex items-center justify-between px-7">
-      <p class="font-mono text-[10px] text-[#3a4154] uppercase tracking-[0.25em]">// {activeNav}</p>
-      <div class="flex items-center gap-5">
-        <div class="flex items-center gap-2 font-mono text-[10px] text-[#3a4154]">
-          <span class="w-[5px] h-[5px] rounded-full bg-[#00ff88]"></span>
-          github · connected
-        </div>
-        <div class="w-[1px] h-[14px] bg-white/[0.06]"></div>
-        <div class="w-[28px] h-[28px] border border-white/[0.1] flex items-center justify-center font-mono text-[11px] text-[#5a6478]">
-          D
-        </div>
-      </div>
-    </header>
 
     <!-- content -->
     <main class="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#1a2030_transparent]">
@@ -200,7 +120,7 @@ async function deleteProject(id) {
           <div>
             <p class="font-mono text-[10px] text-[#3a4154] tracking-[0.2em] mb-2">TUE 27 MAY · 11:52PM</p>
             <h1 class="font-display text-[26px] font-bold tracking-[-0.5px] leading-none">
-            Hey Dev<span class="text-[#00ff88]">Lion</span>.
+            Hey {data.user?.name?.split(' ')[0] ?? 'Developer'}.
           </div>
         <button onclick={() => showCreateModal = true}
            class="font-mono text-[11px] uppercase tracking-[0.1em] px-4 py-[8px] border border-white/[0.1] text-[#5a6478] hover:border-[#00ff88]/40 hover:text-[#00ff88] transition-all cursor-pointer">
@@ -404,14 +324,7 @@ async function deleteProject(id) {
     {/if}
   </div>
 </div>
-
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-    <CreateProjectModal
+ <CreateProjectModal
     open={showCreateModal}
     onClose={() => showCreateModal = false}
     onCreated={(project) => {
@@ -420,4 +333,12 @@ async function deleteProject(id) {
     }}
   />
 
-</div>
+
+         
+    
+</main>
+
+   
+
+
+</DashboardLayout>

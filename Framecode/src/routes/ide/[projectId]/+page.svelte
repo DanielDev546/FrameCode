@@ -1,4 +1,5 @@
 <script>
+  import DashboardLayout from '$lib/layout/DashboardLayout.svelte'
   import { onMount, onDestroy } from 'svelte'
   import { EditorState }        from '@codemirror/state'
   import { EditorView, keymap, lineNumbers, highlightActiveLine,
@@ -21,7 +22,35 @@
 
   // ── Props from server ──────────────────────────
   let { data } = $props()
-  let { project, fileTree, githubToken, hasGitHub } = data
+let { project, fileTree, githubToken, hasGitHub, scaffoldFiles = {} } = data
+  // ── File cache — must be declared before scaffold block ──
+  let fileCache = {}
+   let expandedDirs  = $state([])
+
+  // ── Pre-load scaffold files ────────────────────
+if (Object.keys(scaffoldFiles).length > 0) {
+  // Load into cache
+  Object.entries(scaffoldFiles).forEach(([path, content]) => {
+    fileCache[path] = content
+  })
+
+  // Build file tree from scaffold
+  fileTree = Object.keys(scaffoldFiles).map(path => ({
+    path,
+    sha:  null,
+    size: 0,
+  }))
+
+  // Auto-expand top level dirs
+  const dirs = new Set()
+  fileTree.forEach(f => {
+    const parts = f.path.split('/')
+    for (let i = 1; i < parts.length; i++) {
+      dirs.add(parts.slice(0, i).join('/'))
+    }
+  })
+  expandedDirs = [...dirs]
+}
 
   // ── Extract owner/repo ─────────────────────────
   let owner = ''
@@ -35,13 +64,12 @@
   let termOpen      = $state(true)
   let previewMode   = $state('desktop')
   let activeFilePath = $state('')
-  let expandedDirs  = $state([])
   let cursorLine    = $state(1)
   let cursorCol     = $state(1)
   let fileLoading   = $state(false)
 
   // ── File contents cache ────────────────────────
-  let fileCache = {}
+
 
   // ── Tabs ──────────────────────────────────────
   let openTabs = $state([])
@@ -281,11 +309,19 @@
     return expandedDirs.includes(parent) && isDirVisible(parent)
   }
 
-  // ── Lifecycle ──────────────────────────────────
+ // ── Lifecycle ──────────────────────────────────
   onMount(() => {
-    // Auto-open first file if available
     if (fileTree.length > 0) {
-      openFile(fileTree[0].path)
+      const entryFile = fileTree.find(f =>
+        f.path.includes('+page.svelte') ||
+        f.path.includes('App.jsx') ||
+        f.path.includes('App.tsx') ||
+        f.path.includes('App.vue') ||
+        f.path.includes('index.astro') ||
+        f.path.includes('src/index.ts') ||
+        f.path.includes('index.js')
+      ) ?? fileTree[0]
+      openFile(entryFile.path)
     } else {
       createEditor('// Start coding here\n', 'index.js')
     }
@@ -295,6 +331,11 @@
     if (editorView) editorView.destroy()
   })
 </script>
+
+<DashboardLayout
+    active="ide"
+    {data}
+>
 
 <div class="flex h-screen bg-[#070b12] text-[#e8edf5] overflow-hidden font-sans select-none">
 
@@ -542,3 +583,5 @@
 
   </div>
 </div>
+
+</DashboardLayout>
