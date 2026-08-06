@@ -1,9 +1,7 @@
 <script lang="ts">
-
 let {
     active = "dashboard",
-    avatar = null
-
+    avatar = "/default-avatar.png"
 } = $props();
 
 </script>
@@ -16,10 +14,11 @@ let {
           github · connected
         </div>
         <div class="w-[1px] h-[14px] bg-white/[0.06]"></div>
-        <img
-    src={avatar ?? "/default-avatar.png"}
-    alt="User Avatar"
-    class="w-6 h-6 rounded-full"
+
+   <img
+    src={avatar}
+    alt="Avatar"
+    class="w-8 h-8 rounded-full object-cover"
 />
       </div>
     </header>

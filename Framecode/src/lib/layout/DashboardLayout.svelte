@@ -15,10 +15,10 @@
 
     <div class="flex-1 flex flex-col overflow-hidden">
 
-        <Topbar
-           active={active}
-    avatar={data?.user?.avatarUrl}
-        />
+     <Topbar
+    active={active}
+    avatar={data?.user?.avatar}
+/>
 
         <main class="flex-1 overflow-y-auto">
             {@render children()}

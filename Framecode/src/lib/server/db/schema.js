@@ -7,31 +7,49 @@ import {
   index,
 } from "drizzle-orm/sqlite-core";
 
-// ─── USERS ────────────────────────────────────────────────────────
 export const users = sqliteTable("users", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+
   name: text("name").notNull(),
+
+  username: text("username").unique(),
+
   email: text("email").notNull().unique(),
+
   passwordHash: text("password_hash"),
+
   avatar: text("avatar"),
+
+  bio: text("bio"),
+
+  website: text("website"),
+
+  location: text("location"),
+
   role: text("role", { enum: ["user", "admin"] })
     .notNull()
     .default("user"),
+
   plan: text("plan", { enum: ["free", "pro", "team"] })
     .notNull()
     .default("free"),
+
   provider: text("provider", { enum: ["email", "github", "google"] })
     .notNull()
     .default("email"),
+
   providerId: text("provider_id"),
+
   githubToken: text("github_token"),
+
   stripeId: text("stripe_customer_id"),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
-  // Automatically handles application-level updates
+
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`)
