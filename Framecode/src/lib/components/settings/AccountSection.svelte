@@ -12,109 +12,191 @@
 	}
 </script>
 
-<div class="border border-white/[0.05] rounded-xl overflow-hidden bg-[#070b12]">
+<!-- Header -->
+<div class="px-8 py-8 border-b border-white/[0.05]">
+	<p class="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[#3a4154]">
+		// ACCOUNT
+	</p>
 
-	<!-- Header -->
-	<div class="px-8 py-8 border-b border-white/[0.05]">
-		<p class="font-mono text-[10px] tracking-[0.22em] uppercase text-[#3a4154] mb-2">
-			// ACCOUNT
-		</p>
+	<h1 class="text-[30px] font-bold text-[#e8edf5]">
+		Account Settings
+	</h1>
 
-		<h1 class="text-[22px] font-bold text-[#e8edf5]">
-			Account Settings
-		</h1>
-		
-		<p class="mt-2 text-[#5a6478]">
-			Manage your email address and login credentials.
-		</p>
-	</div>
+	<p class="mt-2 text-[#5a6478]">
+		Manage your login methods and account identity.
+	</p>
+</div>
 
-	<div class="p-8 space-y-6">
+<div class="space-y-6 p-8">
 
-		<!-- Email Card -->
-		<div class="border border-white/[0.05] rounded-sm p-6 bg-[#0b1018]">
+	<!-- Primary Email -->
+	<div class="rounded-sm border border-white/[0.05] bg-[#0b1018] p-6">
 
-			<div class="flex items-start justify-between">
+		<div class="flex items-start justify-between">
 
-				<div>
+			<div>
 
-					<p class="font-mono text-[10px] uppercase tracking-[0.18em] text-[#3a4154]">
-						Primary Email
-					</p>
+				<p class="font-mono text-[10px] uppercase tracking-[0.18em] text-[#3a4154]">
+					Primary Email
+				</p>
 
-					<p class="mt-3 text-[18px] font-semibold text-white">
-						{account.email}
-					</p>
+				<p class="mt-3 text-lg font-semibold text-white">
+					{account.email}
+				</p>
 
-				</div>
+				<p class="mt-2 text-sm text-[#5a6478]">
+					Used for login, notifications and account recovery.
+				</p>
+
+			</div>
+
+			<div class="flex items-center gap-3">
 
 				{#if account.emailVerified}
 					<span
-						class="px-3 py-1 rounded-full
-						bg-[#00ff88]/10
-						border border-[#00ff88]/20
-						text-[#00ff88]
-						font-mono
-						text-[10px]
-						uppercase"
+						class="rounded-full border border-[#00ff88]/20 bg-[#00ff88]/10 px-3 py-1 font-mono text-[10px] uppercase text-[#00ff88]"
 					>
 						Verified
 					</span>
 				{:else}
 					<span
-						class="px-3 py-1 rounded-full
-						bg-yellow-500/10
-						border border-yellow-500/20
-						text-yellow-400
-						font-mono
-						text-[10px]
-						uppercase"
+						class="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 font-mono text-[10px] uppercase text-yellow-400"
 					>
 						Unverified
 					</span>
 				{/if}
 
+				<button
+					onclick={changeEmail}
+					class="border border-[#00ff88]/20 bg-[#00ff88]/5 px-4 py-2 font-mono text-[11px] uppercase text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black"
+				>
+					Change Email
+				</button>
+
 			</div>
 
 		</div>
 
-		<!-- Password Card -->
-		<div class="border border-white/[0.05] rounded-sm p-6 bg-[#0b1018]">
+	</div>
 
-			<div class="flex justify-between items-center">
+	<!-- Authentication -->
+	<div class="rounded-sm border border-white/[0.05] bg-[#0b1018]">
 
-				<div>
+		<div class="border-b border-white/[0.05] p-6">
 
-					<p class="font-mono text-[10px] uppercase tracking-[0.18em] text-[#3a4154]">
-						Password
-					</p>
+			<h2 class="text-lg font-semibold text-white">
+				Authentication
+			</h2>
 
-					<p class="mt-3 text-[20px] tracking-[0.3em]">
-						••••••••••••
-					</p>
+			<p class="mt-1 text-sm text-[#5a6478]">
+				Manage how you sign in to FrameCode.
+			</p>
 
-					<p class="mt-2 text-[#5a6478] text-sm">
-						Last changed {account.lastPasswordChange}
-					</p>
+		</div>
 
-				</div>
+		<!-- Email -->
+		<div class="flex items-center justify-between border-b border-white/[0.05] p-6">
+
+			<div>
+
+				<p class="font-medium text-white">
+					Email & Password
+				</p>
+
+				<p class="mt-1 text-sm text-[#5a6478]">
+					Traditional sign in using your email.
+				</p>
+
+			</div>
+
+			<button
+				onclick={changePassword}
+				class="border border-[#00ff88]/20 bg-[#00ff88]/5 px-5 py-2 font-mono text-[11px] uppercase text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black"
+			>
+				Change Password
+			</button>
+
+		</div>
+
+		<!-- GitHub -->
+		<div class="flex items-center justify-between p-6">
+
+			<div>
+
+				<p class="font-medium text-white">
+					GitHub
+				</p>
+
+				<p class="mt-1 text-sm text-[#5a6478]">
+					{#if account.githubConnected}
+						Connected as @{account.githubUsername}
+					{:else}
+						No GitHub account connected.
+					{/if}
+				</p>
+
+			</div>
+
+			{#if account.githubConnected}
+
+				<span
+					class="rounded-full border border-[#00ff88]/20 bg-[#00ff88]/10 px-3 py-1 font-mono text-[10px] uppercase text-[#00ff88]"
+				>
+					Connected
+				</span>
+
+			{:else}
 
 				<button
-					onclick={changePassword}
-					class="px-5 py-2
-					font-mono
-					text-[11px]
-					uppercase
-					border border-[#00ff88]/20
-					bg-[#00ff88]/5
-					text-[#00ff88]
-					hover:bg-[#00ff88]
-					hover:text-black
-					transition-all"
+					onclick={connectGithub}
+					class="border border-[#00ff88]/20 bg-[#00ff88]/5 px-5 py-2 font-mono text-[11px] uppercase text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black"
 				>
-					Change Password
+					Connect GitHub
 				</button>
 
+			{/if}
+
+		</div>
+
+	</div>
+
+	<!-- Account Information -->
+	<div class="rounded-sm border border-white/[0.05] bg-[#0b1018] p-6">
+
+		<p class="mb-6 font-mono text-[10px] uppercase tracking-[0.18em] text-[#3a4154]">
+			Account Information
+		</p>
+
+		<div class="grid grid-cols-3 gap-8">
+
+			<div>
+				<p class="text-xs uppercase text-[#5a6478]">
+					Member Since
+				</p>
+
+				<p class="mt-2 text-white">
+					{account.createdAt}
+				</p>
+			</div>
+
+			<div>
+				<p class="text-xs uppercase text-[#5a6478]">
+					Plan
+				</p>
+
+				<p class="mt-2 text-white">
+					Free
+				</p>
+			</div>
+
+			<div>
+				<p class="text-xs uppercase text-[#5a6478]">
+					Account ID
+				</p>
+
+				<p class="mt-2 font-mono text-[#00ff88]">
+					{account.id}
+				</p>
 			</div>
 
 		</div>

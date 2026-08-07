@@ -29,7 +29,7 @@
 	const navLinks = [
 		{ href: '/templates', label: 'Templates' },
 		{ href: '/dashboard', label: 'Dashboard' },
-		{ href: '/forktools', label: 'ForkTools' },
+		{ href: '/fork', label: 'ForkTools' },
 		{ href: '/docs', label: 'Docs' },
 		{ href: 'https://github.com', label: 'GitHub', external: true },
 	];
