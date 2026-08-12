@@ -1,16 +1,52 @@
 <script lang="ts">
-import { onMount } from "svelte";
+import { onMount, onDestroy } from "svelte";
 
 import DashboardLayout from "$lib/layout/DashboardLayout.svelte";
 import CreateProjectModal from "$lib/components/CreateProjectModal.svelte";
 
 let { data } = $props();
 
-let showCreateModal = false;
+let showCreateModal = $state(false);
 
 // ── Real data from DB ──────────────────────────
 let projects = $state(data.projects ?? []);
 let activity = $state(data.activity ?? []);
+
+// ── For Realtime Date and time  ─────────────────────
+
+let currentDate = $state(new Date())
+let clockInterval: ReturnType<typeof setInterval>
+
+onMount(() => {
+    clockInterval = setInterval(() => {
+        currentDate = new Date()
+    }, 1000)
+})
+
+onDestroy(() => {
+    clearInterval(clockInterval)
+})
+
+const formattedDate = $derived(
+    currentDate
+        .toLocaleDateString('en-US', {
+            weekday: 'short',
+            day: '2-digit',
+            month: 'short'
+        })
+        .toUpperCase()
+)
+
+const formattedTime = $derived(
+    currentDate
+        .toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        })
+        .toUpperCase()
+)
+
 
 // ── GitHub repos ───────────────────────────────
 let repos = $state([]);
@@ -118,9 +154,10 @@ function sc(score: number) {
         <!-- greeting -->
         <div class="flex items-end justify-between mb-8">
           <div>
-            <p class="font-mono text-[10px] text-[#3a4154] tracking-[0.2em] mb-2">TUE 27 MAY · 11:52PM</p>
-            <h1 class="font-display text-[26px] font-bold tracking-[-0.5px] leading-none">
-            Hey {data.user?.name?.split(' ')[0] ?? 'Developer'}.
+<p class="font-mono text-[10px] text-[#00ff88] tracking-[0.2em] mb-2">
+    {formattedDate} · {formattedTime}
+</p>            <h1 class="font-display text-[26px] font-bold tracking-[-0.5px] leading-none">
+            Hey {data.user?.name?.split(' ')[0] ?? 'Developer'}.</h1>
           </div>
         <button onclick={() => showCreateModal = true}
            class="font-mono text-[11px] uppercase tracking-[0.1em] px-4 py-[8px] border border-white/[0.1] text-[#5a6478] hover:border-[#00ff88]/40 hover:text-[#00ff88] transition-all cursor-pointer">

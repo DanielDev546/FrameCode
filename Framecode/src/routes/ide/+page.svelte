@@ -2,6 +2,19 @@
   import RepoExplorer from '$lib/components/RepoExplorer.svelte';
   import CodeEditor from '$lib/components/CodeEditor.svelte';
 
+
+   import { onMount } from 'svelte'
+    import { goto } from '$app/navigation'
+
+    onMount(() => {
+        const lastProjectId = localStorage.getItem('framecode:lastProjectId')
+
+        if (lastProjectId) {
+            goto(`/ide/${lastProjectId}`)
+        }
+    })
+
+
   type Repo = { name: string; owner: string; defaultBranch: string };
   type OpenFile = { owner: string; repo: string; path: string; ref: string };
 
@@ -89,6 +102,10 @@ async function saveFile(path) {
   <aside class="sidebar">
     <RepoExplorer {repos} onOpenFile={openFile} />
   </aside>
+
+  <div class="ide-loading">
+    <span>Opening last project...</span>
+</div>
 
   <main class="editor-pane">
     {#if loadingFile}

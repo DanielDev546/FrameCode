@@ -19,7 +19,7 @@
 	onMount(() => {
 		setTimeout(() => {
 			loading = false;
-		}, 2500);
+		}, 2500); 
 	});
 
 	/* ---------------- MOBILE MENU ---------------- */

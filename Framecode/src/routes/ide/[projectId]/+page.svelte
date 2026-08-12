@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import DashboardLayout from '$lib/layout/DashboardLayout.svelte'
   import { onMount, onDestroy } from 'svelte'
   import { EditorState }        from '@codemirror/state'
@@ -25,6 +25,11 @@
 let { project, fileTree, githubToken, hasGitHub, scaffoldFiles = {} } = data
   // ── File cache — must be declared before scaffold block ──
   let fileCache = {}
+
+
+
+
+
    let expandedDirs  = $state([])
 
   // ── Pre-load scaffold files ────────────────────
@@ -63,6 +68,82 @@ if (Object.keys(scaffoldFiles).length > 0) {
   let sidebarOpen   = $state(true)
   let termOpen      = $state(true)
   let previewMode   = $state('desktop')
+
+  // ── Live Preview ─────────────────────────────
+let previewHtml = $state('')
+let previewKey = $state(0)
+function updatePreview() {
+	// ─────────────────────────────────────
+	// Find HTML entry point
+	// ─────────────────────────────────────
+
+	const htmlPath =
+		activeFilePath.endsWith('.html')
+			? activeFilePath
+			: Object.keys(fileCache).find(
+				path =>
+					path.endsWith('index.html') ||
+					path.endsWith('app.html')
+			)
+
+	if (!htmlPath) {
+		previewHtml = ''
+		return
+	}
+
+	let html = fileCache[htmlPath] ?? ''
+
+	// ─────────────────────────────────────
+	// Inject ALL CSS
+	// ─────────────────────────────────────
+
+	const css = Object.keys(fileCache)
+		.filter(path => path.endsWith('.css'))
+		.map(path => fileCache[path])
+		.join('\n')
+
+	if (css) {
+		const style = `<style>${css}</style>`
+
+		if (html.includes('</head>')) {
+			html = html.replace(
+				'</head>',
+				`${style}</head>`
+			)
+		} else {
+			html = `${style}${html}`
+		}
+	}
+
+	// ─────────────────────────────────────
+	// Inject ALL JavaScript
+	// ─────────────────────────────────────
+
+	const js = Object.keys(fileCache)
+		.filter(path => path.endsWith('.js'))
+		.map(path => fileCache[path])
+		.join('\n')
+
+	if (js) {
+		const script = `<script>${js}<\/script>`
+
+		if (html.includes('</body>')) {
+			html = html.replace(
+				'</body>',
+				`${script}</body>`
+			)
+		} else {
+			html += script
+		}
+	}
+
+	// ─────────────────────────────────────
+	// Update preview
+	// ─────────────────────────────────────
+
+	previewHtml = html
+	previewKey++
+}
   let activeFilePath = $state('')
   let cursorLine    = $state(1)
   let cursorCol     = $state(1)
@@ -73,6 +154,68 @@ if (Object.keys(scaffoldFiles).length > 0) {
 
   // ── Tabs ──────────────────────────────────────
   let openTabs = $state([])
+// ── Autosave ───────────────────────────────────
+let saveStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle')
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+function triggerAutoSave(path: string) {
+	if (autoSaveTimer) {
+		clearTimeout(autoSaveTimer)
+	}
+
+	autoSaveTimer = setTimeout(() => {
+		saveFile(path)
+	}, 2000)
+}
+
+async function saveFile(path: string) {
+	if (!path) return
+
+	const content = fileCache[path]
+
+	if (content === undefined) return
+
+	saveStatus = 'saving'
+
+	try {
+		const res = await fetch('/api/ide/save', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				projectId: project.id,
+				path,
+				content
+			})
+		})
+
+		if (!res.ok) {
+			throw new Error(await res.text())
+		}
+
+		saveStatus = 'saved'
+
+		// Mark the current tab as clean
+		openTabs = openTabs.map(tab =>
+			tab.path === path
+				? { ...tab, dirty: false }
+				: tab
+		)
+
+		// Return to idle after a short delay
+		setTimeout(() => {
+			if (saveStatus === 'saved') {
+				saveStatus = 'idle'
+			}
+		}, 2000)
+
+	} catch (error) {
+		console.error('[IDE] Autosave failed:', error)
+		saveStatus = 'error'
+	}
+}
+
 
   // ── Terminal ──────────────────────────────────
   let termLines = $state([
@@ -125,23 +268,54 @@ if (Object.keys(scaffoldFiles).length > 0) {
     return '#3a4154'
   }
 
+
+  function runPreview() {
+    console.log('[FrameCode] Running project preview...')
+
+    updatePreview()
+
+    termLines = [
+        ...termLines,
+        {
+            c: '#00ff88',
+            t: '  ✓ Preview started'
+        }
+    ]
+}
+
+
   // ── Create CodeMirror instance ─────────────────
   function createEditor(content, path) {
     if (editorView) { editorView.destroy(); editorView = null }
     if (!editorEl)  return
 
-    const updateListener = EditorView.updateListener.of(update => {
-      if (update.docChanged) {
-        fileCache[path] = update.state.doc.toString()
-        openTabs = openTabs.map(t =>
-          t.path === path ? { ...t, dirty: true } : t
-        )
-      }
-      const head = update.state.selection.main.head
-      const line = update.state.doc.lineAt(head)
-      cursorLine = line.number
-      cursorCol  = head - line.from + 1
-    })
+  const updateListener = EditorView.updateListener.of(update => {
+	if (update.docChanged) {
+		const content = update.state.doc.toString()
+
+		// Update local project cache
+		fileCache[path] = content
+
+		// Mark tab as having unsaved changes
+		openTabs = openTabs.map(tab =>
+			tab.path === path
+				? { ...tab, dirty: true }
+				: tab
+		)
+
+		// Start/restart the 2-second autosave timer
+		triggerAutoSave(path)
+	}
+
+	const head = update.state.selection.main.head
+	const line = update.state.doc.lineAt(head)
+
+	cursorLine = line.number
+	cursorCol = head - line.from + 1
+})
+
+
+
 
     editorView = new EditorView({
       state: EditorState.create({
@@ -311,6 +485,8 @@ if (Object.keys(scaffoldFiles).length > 0) {
 
  // ── Lifecycle ──────────────────────────────────
   onMount(() => {
+    localStorage.setItem('framecode:lastProjectId', project.id)
+    
     if (fileTree.length > 0) {
       const entryFile = fileTree.find(f =>
         f.path.includes('+page.svelte') ||
@@ -472,16 +648,16 @@ if (Object.keys(scaffoldFiles).length > 0) {
           {/if}
         </div>
 
-        <!-- actions -->
-        <div class="flex items-center gap-2 px-4 h-full border-l border-white/[0.04] shrink-0">
-          <button class="font-mono text-[10px] uppercase tracking-[0.08em] px-3 py-[5px] border border-white/[0.08] text-[#5a6478] hover:text-[#00ff88] hover:border-[#00ff88]/30 transition-all">
-            ▶ Run
-          </button>
-          <button class="font-mono text-[10px] uppercase tracking-[0.08em] px-3 py-[5px] bg-[#00ff88] text-black hover:brightness-110 transition-all font-bold">
-            Deploy
-          </button>
-        </div>
-      </div>
+<button
+    type="button"
+    onclick={runPreview}
+    class="font-mono text-[10px] uppercase tracking-[0.08em]
+           px-3 py-[5px] border border-white/[0.08]
+           text-[#5a6478] hover:text-[#00ff88]
+           hover:border-[#00ff88]/30 transition-all"
+>
+    ▶ Run
+</button>
 
       <!-- breadcrumb -->
       <div class="flex items-center justify-between px-4 h-[26px]">
@@ -515,31 +691,44 @@ if (Object.keys(scaffoldFiles).length > 0) {
       <!-- divider -->
       <div class="w-[1px] bg-white/[0.05] shrink-0"></div>
 
-      <!-- preview -->
-      <div class="w-[360px] shrink-0 flex flex-col">
-        <div class="shrink-0 h-[36px] border-b border-white/[0.05] flex items-center justify-between px-4">
-          <p class="font-mono text-[9px] text-[#3a4154] uppercase tracking-[0.15em]">Preview</p>
-          <div class="flex items-center gap-1">
-            {#each [['desktop','⬜'],['tablet','▭'],['mobile','▯']] as [mode, icon]}
-              <button
-                onclick={() => previewMode = mode}
-                class="font-mono text-[11px] w-[24px] h-[24px] flex items-center justify-center
-                       {previewMode === mode ? 'text-[#00ff88]' : 'text-[#3a4154] hover:text-[#5a6478]'}"
-              >{icon}</button>
-            {/each}
-          </div>
-        </div>
-        <div class="flex-1 bg-[#050810] flex items-center justify-center p-3">
-          <div class="border border-white/[0.08] h-full flex items-center justify-center
-                      transition-all duration-300"
-               style="width:{previewMode==='mobile'?'375px':previewMode==='tablet'?'600px':'100%'};max-width:100%;">
-            <p class="font-mono text-[10px] text-[#3a4154] text-center">
-              Preview available for<br/>HTML/CSS/JS files
-            </p>
-          </div>
-        </div>
+<div class="flex-1 bg-[#050810] flex items-center justify-center p-3 overflow-hidden">
+  <div
+    class="h-full border border-white/[0.08] overflow-hidden bg-white transition-all duration-300"
+    style="
+      width:{previewMode === 'mobile'
+        ? '375px'
+        : previewMode === 'tablet'
+          ? '600px'
+          : '100%'};
+      max-width:100%;
+    "
+  >
+
+    {#if previewHtml}
+
+      <iframe
+        key={previewKey}
+        srcdoc={previewHtml}
+        title="FrameCode Preview"
+        class="w-full h-full border-0 bg-white"
+        sandbox="allow-scripts"
+      ></iframe>
+
+    {:else}
+
+      <div class="w-full h-full flex items-center justify-center bg-[#050810]">
+        <p class="font-mono text-[10px] text-[#3a4154] text-center">
+          No preview available<br />
+          <span class="text-[#252b38]">
+            Open an HTML file and click Run
+          </span>
+        </p>
       </div>
-    </div>
+
+    {/if}
+
+  </div>
+</div>
 
     <!-- terminal -->
     <div class="shrink-0 border-t border-white/[0.05] bg-[#050810] flex flex-col"

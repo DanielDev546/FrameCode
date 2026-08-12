@@ -48,153 +48,199 @@
       loading = false
     }
   }
-</script>
+</script>{#if open}
+	<!-- Backdrop -->
+	<div
+		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 py-8 px-4 backdrop-blur-sm"
+	>
+		<!-- Modal -->
+		<div
+			class="w-full max-w-2xl overflow-hidden rounded-sm p-8 border border-[#00ff88]/10 bg-[#070b12] shadow-[0_0_80px_rgba(0,255,136,0.08)]"
+		>
+			<!-- Header -->
+			<div class="border-b border-white/5 px-6 py-5">
+				<p
+					class="font-mono text-[10px] uppercase tracking-[0.25em] text-[#3a4154]"
+				>
+					// CREATE PROJECT
+				</p>
 
-{#if open}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-    <div class="w-[580px] px-8 py-5 mt-8 rounded-lg border border-white/10 bg-[#070b12]">
+				<h2 class="mt-2 text-2xl font-bold text-[#e8edf5]">
+					New Project
+				</h2>
 
-      <!-- Header -->
-      <div class="border-b border-white/5 px-6 py-5">
-        <p class="font-mono text-[10px] uppercase tracking-[0.25em] text-[#3a4154]">
-          // CREATE PROJECT
-        </p>
-        <h2 class="mt-2 text-2xl font-bold text-[#e8edf5]">New Project</h2>
-        <p class="mt-1 text-sm text-[#5a6478]">
-          Create a new FrameCode project or import an existing repository.
-        </p>
-      </div>
+				<p class="mt-1 text-sm text-[#5a6478]">
+					Create a new FrameCode project or import an existing repository.
+				</p>
+			</div>
 
-      <!-- Body -->
-      <div class="space-y-6 p-6">
+			<!-- Body -->
+			<div class="space-y-6 p-6">
 
-        <!-- Error -->
-        {#if error}
-          <div class="border border-[#ff4f4f]/40 bg-[#ff4f4f]/5 px-4 py-3 font-mono text-[11px] text-[#ff4f4f]">
-            ✕ {error}
-          </div>
-        {/if}
+				<!-- Error -->
+				{#if error}
+					<div
+						class="border border-[#ff4f4f]/40 bg-[#ff4f4f]/5 px-4 py-3 font-mono text-[11px] text-[#ff4f4f]"
+					>
+						✕ {error}
+					</div>
+				{/if}
 
-        <!-- Project Type -->
-        <div>
-          <p class="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]">
-            Project Type
-          </p>
-          <div class="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onclick={() => projectType = 'framecode'}
-              class="border p-5 text-left rounded-md transition
-                     {projectType === 'framecode'
-                       ? 'border-[#00ff88] bg-[#00ff88]/5'
-                       : 'border-white/10 hover:border-[#00ff88]/40'}"
-            >
-              <p class="font-semibold text-[#e8edf5]">FrameCode Project</p>
-              <p class="mt-2 text-sm text-[#5a6478]">Start from scratch inside FrameCode.</p>
-            </button>
+				<!-- Project Type -->
+				<div>
+					<p
+						class="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
+					>
+						Project Type
+					</p>
 
-            <button
-              type="button"
-              onclick={() => projectType = 'github'}
-              class="border p-5 text-left rounded-md transition
-                     {projectType === 'github'
-                       ? 'border-[#00ff88] bg-[#00ff88]/5'
-                       : 'border-white/10 hover:border-[#00ff88]/40'}"
-            >
-              <p class="font-semibold text-[#e8edf5]">Import GitHub</p>
-              <p class="mt-2 text-sm text-[#5a6478]">Continue working on an existing repository.</p>
-            </button>
-          </div>
-        </div>
+					<div class="grid grid-cols-2 gap-4">
 
-        <!-- Name -->
-        <div>
-          <label class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]">
-            Project Name
-          </label>
-          <input
-            bind:value={projectName}
-            placeholder="awesome-dashboard"
-            class="w-full border rounded-md border-white/10 bg-transparent px-4 py-3
-                   text-[#e8edf5] outline-none transition focus:border-[#00ff88]"
-          />
-        </div>
+						<button
+							type="button"
+							onclick={() => projectType = 'framecode'}
+							class="rounded-md border p-5 text-left transition
+							{projectType === 'framecode'
+								? 'border-[#00ff88] bg-[#00ff88]/5'
+								: 'border-white/10 hover:border-[#00ff88]/40'}"
+						>
+							<p class="font-semibold text-[#e8edf5]">
+								FrameCode Project
+							</p>
 
-        <!-- Language + Framework -->
-        <div class="grid grid-cols-2 gap-5">
-          <div>
-            <label class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]">
-              Language
-            </label>
-            <select
-              bind:value={language}
-              class="w-full border rounded-md border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
-            >
-              <option>TypeScript</option>
-              <option>JavaScript</option>
-              <option>Python</option>
-              <option>C++</option>
-              <option>Rust</option>
-              <option>Go</option>
-            </select>
-          </div>
-          <div>
-            <label class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]">
-              Framework
-            </label>
-            <select
-              bind:value={framework}
-              class="w-full border rounded-md border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
-            >
-              <option>SvelteKit</option>
-              <option>React</option>
-              <option>Next.js</option>
-              <option>Vue</option>
-              <option>Astro</option>
-              <option>Elysia</option>
-              <option>None</option>
-            </select>
-          </div>
-        </div>
+							<p class="mt-2 text-sm text-[#5a6478]">
+								Start from scratch inside FrameCode.
+							</p>
+						</button>
 
-        <!-- Visibility -->
-        <div>
-          <label class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]">
-            Visibility
-          </label>
-          <select
-            bind:value={visibility}
-            class="w-full border rounded-md border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
-          >
-            <option value="private">Private</option>
-            <option value="public">Public</option>
-          </select>
-        </div>
 
-      </div>
+						<button
+							type="button"
+							onclick={() => projectType = 'github'}
+							class="rounded-md border p-5 text-left transition
+							{projectType === 'github'
+								? 'border-[#00ff88] bg-[#00ff88]/5'
+								: 'border-white/10 hover:border-[#00ff88]/40'}"
+						>
+							<p class="font-semibold text-[#e8edf5]">
+								Import GitHub
+							</p>
 
-      <!-- Footer -->
-      <div class="flex justify-end gap-3 border-t border-white/5 px-6 py-5">
-        <button
-          type="button"
-          onclick={onClose}
-          class="border border-white/10 px-5 py-2 font-mono text-[11px] uppercase
-                 tracking-[0.15em] text-[#5a6478] transition hover:text-white"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onclick={handleCreate}
-          disabled={loading}
-          class="border border-[#00ff88]/30 bg-[#00ff88]/10 px-6 py-2 font-mono text-[11px]
-                 uppercase tracking-[0.15em] text-[#00ff88] transition
-                 hover:bg-[#00ff88] hover:text-black disabled:opacity-50"
-        >
-          {loading ? 'Creating...' : 'Create →'}
-        </button>
-      </div>
+							<p class="mt-2 text-sm text-[#5a6478]">
+								Continue working on an existing repository.
+							</p>
+						</button>
 
-    </div>
-  </div>
+					</div>
+				</div>
+
+
+				<!-- Name -->
+				<div>
+					<label
+						class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
+					>
+						Project Name
+					</label>
+
+					<input
+						bind:value={projectName}
+						placeholder="awesome-dashboard"
+						class="w-full rounded-md border border-white/10 bg-transparent px-4 py-3 text-[#e8edf5] outline-none transition focus:border-[#00ff88]"
+					/>
+				</div>
+
+
+				<!-- Language + Framework -->
+				<div class="grid grid-cols-2 gap-5">
+
+					<div>
+						<label
+							class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
+						>
+							Language
+						</label>
+
+						<select
+							bind:value={language}
+							class="w-full rounded-md border border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
+						>
+							<option>TypeScript</option>
+							<option>JavaScript</option>
+							<option>Python</option>
+							<option>C++</option>
+							<option>Rust</option>
+							<option>Go</option>
+						</select>
+					</div>
+
+
+					<div>
+						<label
+							class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
+						>
+							Framework
+						</label>
+
+						<select
+							bind:value={framework}
+							class="w-full rounded-md border border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
+						>
+							<option>SvelteKit</option>
+							<option>React</option>
+							<option>Next.js</option>
+							<option>Vue</option>
+							<option>Astro</option>
+							<option>Elysia</option>
+							<option>None</option>
+						</select>
+					</div>
+
+				</div>
+
+
+				<!-- Visibility -->
+				<div>
+					<label
+						class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
+					>
+						Visibility
+					</label>
+
+					<select
+						bind:value={visibility}
+						class="w-full rounded-md border border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
+					>
+						<option value="private">Private</option>
+						<option value="public">Public</option>
+					</select>
+				</div>
+
+			</div>
+
+
+			<!-- Footer -->
+			<div
+				class="flex justify-end gap-3 border-t border-white/5 px-6 py-5"
+			>
+				<button
+					type="button"
+					onclick={onClose}
+					class="border border-white/10 px-5 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#5a6478] transition hover:text-white"
+				>
+					Cancel
+				</button>
+
+				<button
+					type="button"
+					onclick={handleCreate}
+					disabled={loading}
+					class="border border-[#00ff88]/30 bg-[#00ff88]/10 px-6 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black disabled:opacity-50"
+				>
+					{loading ? 'Creating...' : 'Create →'}
+				</button>
+			</div>
+
+		</div>
+	</div>
 {/if}
