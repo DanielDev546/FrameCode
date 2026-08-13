@@ -3,7 +3,7 @@
   import { EditorState } from '@codemirror/state';
   import { EditorView, basicSetup } from 'codemirror';
   import { framecodeCM } from '$lib/editor/framecodeTheme';
-  import { languageForFile } from '$lib/utils/languageForFile';
+  import { LanguageforFile } from '$lib/utils/LanguageforFile';
 
   // `value` only seeds the doc when the editor is (re)created — CodeMirror
   // owns the text after that, so don't rely on it to push live updates in.
@@ -29,7 +29,7 @@
   async function createEditor() {
     view?.destroy();
 
-    const language = await languageForFile(filename);
+    const language = await LanguageforFile(filename);
 
     const state = EditorState.create({
       doc: value,

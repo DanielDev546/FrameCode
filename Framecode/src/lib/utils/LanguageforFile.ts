@@ -2,7 +2,7 @@ import type { Extension } from "@codemirror/state";
 
 // Lazily imports only the language package needed for the file being opened,
 // instead of bundling all 8 language packages into every page load.
-export async function languageForFile(
+export async function LanguageforFile(
   filename: string,
 ): Promise<Extension | null> {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -13,7 +13,7 @@ export async function languageForFile(
       return (await import("@codemirror/lang-javascript")).javascript({
         jsx: true,
       });
-
+      1;
     case "ts":
     case "tsx":
       return (await import("@codemirror/lang-javascript")).javascript({
