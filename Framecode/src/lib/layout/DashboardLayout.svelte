@@ -7,20 +7,43 @@
         data,
         children
     } = $props();
+
+    let mobileMenuOpen = $state(false);
+
+    function closeMobileMenu() {
+        mobileMenuOpen = false;
+    }
 </script>
 
 <div class="flex h-screen bg-[#070b12] text-[#e8edf5] overflow-hidden">
 
-    <Sidebar {active} />
+    <!-- Mobile backdrop -->
+    {#if mobileMenuOpen}
+        <button
+            type="button"
+            aria-label="Close navigation"
+            onclick={closeMobileMenu}
+            class="fixed inset-0 z-40 bg-black/70 backdrop-blur-[2px] md:hidden"
+        ></button>
+    {/if}
 
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Sidebar -->
+    <Sidebar
+        {active}
+        mobileOpen={mobileMenuOpen}
+        onClose={closeMobileMenu}
+    />
 
-     <Topbar
-    active={active}
-    avatar={data?.user?.avatar}
-/>
+    <!-- Main application -->
+    <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
 
-        <main class="flex-1 overflow-y-auto">
+        <Topbar
+            {active}
+            avatar={data?.user?.avatar}
+            onMenu={() => mobileMenuOpen = true}
+        />
+
+        <main class="flex-1 min-h-0 overflow-y-auto">
             {@render children()}
         </main>
 
