@@ -48,17 +48,7 @@
     dirty = true;
   }
 
-   // ── Save state ─────────────────────────────────
-let saveStatus  = $state('idle')   // 'idle' | 'saving' | 'saved' | 'error'
-let autoSaveTimer = null
 
-// ── Auto-save (2s debounce) ────────────────────
-function triggerAutoSave(path) {
-  clearTimeout(autoSaveTimer)
-  autoSaveTimer = setTimeout(() => {
-    saveFile(path)
-  }, 2000)
-}
 
 // ── Save file ──────────────────────────────────
 async function saveFile(path) {

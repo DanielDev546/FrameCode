@@ -1,56 +1,91 @@
 import { fail, redirect } from "@sveltejs/kit";
+
 import {
   findUserByEmail,
   verifyPassword,
   createJWT,
 } from "$lib/server/services/auth.js";
 
-/** @type {import('./$types').Actions} */
 export const actions = {
-  login: async ({ request, cookies }) => {
+  login: async ({ request, cookies, url }) => {
     const data = await request.formData();
-    const email = data.get("email")?.trim().toLowerCase();
-    const password = data.get("password");
+
+    const emailValue = data.get("email");
+    const passwordValue = data.get("password");
+
+    const email =
+      typeof emailValue === "string" ? emailValue.trim().toLowerCase() : "";
+
+    const password = typeof passwordValue === "string" ? passwordValue : "";
+
+    // ─────────────────────────────────────────
+    // VALIDATION
+    // ─────────────────────────────────────────
 
     if (!email || !password) {
-      return fail(400, { error: "Email and password are required." });
+      return fail(400, {
+        error: "Please enter your email and password.",
+      });
     }
+
+    // ─────────────────────────────────────────
+    // FIND USER
+    // ─────────────────────────────────────────
 
     const user = await findUserByEmail(email);
 
     if (!user || !user.passwordHash) {
-      await verifyPassword(
-        "dummy",
-        "$2b$12$dummyhashfortimingpreventiondummydummy00",
-      );
-      return fail(401, { error: "Invalid email or password." });
-    }
-    //Google Sign-in___________________
-    if (user && user.passwordHash === null) {
-      throw new Error("This account uses Google Sign-In.");
+      return fail(401, {
+        error: "Invalid email or password.",
+      });
     }
 
+    // ─────────────────────────────────────────
+    // VERIFY PASSWORD
+    // ─────────────────────────────────────────
+
     const valid = await verifyPassword(password, user.passwordHash);
+
     if (!valid) {
-      return fail(401, { error: "Invalid email or password." });
+      return fail(401, {
+        error: "Invalid email or password.",
+      });
     }
+
+    // ─────────────────────────────────────────
+    // CREATE JWT
+    // ─────────────────────────────────────────
 
     const token = await createJWT({
       sub: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      plan: user.plan,
+      plan: user.plan ?? "free",
     });
+
+    // ─────────────────────────────────────────
+    // COOKIE
+    // ─────────────────────────────────────────
 
     cookies.set("fc_token", token, {
       httpOnly: true,
-      secure: false,
+      secure: import.meta.env.PROD,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    redirect(302, "/dashboard");
+    // ─────────────────────────────────────────
+    // REDIRECT
+    // ─────────────────────────────────────────
+
+    const redirectParam = url.searchParams.get("redirect");
+
+    if (redirectParam && redirectParam.startsWith("/")) {
+      throw redirect(302, redirectParam);
+    }
+
+    throw redirect(302, "/dashboard");
   },
 };

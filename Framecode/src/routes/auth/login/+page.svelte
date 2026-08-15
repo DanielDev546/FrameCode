@@ -1,22 +1,32 @@
-<script>
-   let { form } = $props()
+<script lang="ts">
+	let { form } = $props()
 
-  let showPass = $state(false)
-  let email    = $state('')
-  let password = $state('')
-  let provider = $state(null)      // ← add this
-  let loading  = $state(false)
+	let showPass = $state(false)
+	let email = $state('')
+	let password = $state('')
 
-  let canSubmit = $derived(email.length > 3 && password.length >= 6)
+	let provider =
+		$state<'github' | 'google' | null>(null)
 
-  function handleOAuth(p) {
-  provider = p
-  loading  = true
-  window.location.href = `/auth/${p}`
-}
+	let loading = $state(false)
 
+	let canSubmit = $derived(
+		email.trim().length > 3 &&
+		password.length >= 6 &&
+		!loading
+	)
+
+	function handleOAuth(
+		p: 'github' | 'google'
+	) {
+		provider = p
+		loading = true
+
+		window.location.href =
+			`/auth/${p}`
+	}
 </script>
- <br>
+ 
 <form 
    method="POST"
    action="?/login"

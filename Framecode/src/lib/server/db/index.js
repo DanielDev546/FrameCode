@@ -1,11 +1,14 @@
-// place files you want to import through the `$lib` alias in this folder.
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { env } from "$env/dynamic/private";
 import * as schema from "./schema.js";
 
-const sqlite = new Database("local.db");
+if (!env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is not configured");
+}
 
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
+const sql = neon(env.DATABASE_URL);
 
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(sql, {
+  schema,
+});

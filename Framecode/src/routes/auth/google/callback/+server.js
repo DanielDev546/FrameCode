@@ -62,7 +62,9 @@ export async function GET({ url, cookies }) {
     redirect(302, "/dashboard");
   } catch (err) {
     if (isRedirect(err)) throw err;
-    console.error("[Google OAuth]", err.message);
+
+    console.error("[Google OAuth]", err instanceof Error ? err.message : err);
+
     redirect(302, "/auth/login?error=oauth_failed");
   }
 }

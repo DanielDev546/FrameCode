@@ -49,7 +49,10 @@ export async function GET({ url, cookies }) {
       },
     });
     const emails = await emailsRes.json();
-    const primary = emails.find((e) => e.primary && e.verified);
+    const primary = emails.find(
+      /** @param {{ primary?: boolean; verified?: boolean; email?: string }} e */
+      (e) => e.primary && e.verified,
+    );
 
     // Upsert user in DB
     const user = await upsertOAuthUser({
@@ -81,9 +84,12 @@ export async function GET({ url, cookies }) {
 
     redirect(302, "/dashboard");
   } catch (err) {
-    if (isRedirect(err)) throw err; // ← add this line first
+    if (err instanceof Error) {
+      console.error("[GitHub OAuth] FAILED AT:", err.message, err.stack);
+    } else {
+      console.error("[GitHub OAuth] FAILED AT:", err);
+    }
 
-    console.error("[GitHub OAuth] FAILED AT:", err.message, err.stack);
     redirect(302, "/auth/login?error=oauth_failed");
   }
 }
