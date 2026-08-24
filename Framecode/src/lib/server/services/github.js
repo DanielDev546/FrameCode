@@ -63,3 +63,38 @@ export async function importRepoAsProject(userId, repo) {
 
   return created[0];
 }
+
+export async function fetchRepoFileTree(token, owner, repo) {
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (!repoRes.ok) return [];
+  const repoData = await repoRes.json();
+  const branch = repoData.default_branch ?? "main";
+
+  const treeRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+    {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    },
+  );
+  if (!treeRes.ok) return [];
+  const treeData = await treeRes.json();
+
+  return (treeData.tree ?? [])
+    .filter((f) => f.type === "blob")
+    .map((f) => ({ path: f.path, sha: f.sha, size: f.size }))
+    .slice(0, 100);
+}
+
+export async function fetchRepoFileContent(token, owner, repo, path) {
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    },
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return atob(data.content.replace(/\n/g, ""));
+}

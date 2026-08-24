@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   // This page assumes your root/authenticated +layout.svelte already
   // renders the top nav and left MENU sidebar (same as your dashboard
   // and IDE pages) — this file is just the main content area.
@@ -23,25 +23,30 @@
     })
   );
 
-  function frameworkColor(framework) {
+  type Template = {
+    id: string;
+    slug: string;
+    name: string;
+    description?: string | null;
+    category: string;
+    framework: string;
+    thumbnailUrl?: string | null;
+    downloads: number;
+    featured: boolean;
+};
+
+function frameworkColor(framework: string | null | undefined) {
     const key = (framework ?? '').toLowerCase();
     if (key.includes('svelte')) return { bg: '#ff3e00', text: '#3a0e00' };
     if (key.includes('react') || key === 'javascript' || key === 'js')
       return { bg: '#ffb340', text: '#3a2400' };
     if (key.includes('vue') || key.includes('html')) return { bg: '#00d4ff', text: '#00232e' };
     return { bg: '#5a6478', text: '#0a0f18' };
-  }
+}
 
-  async function useTemplate(t) {
-    // Wire this to your actual "create project from template" flow, e.g.:
-    //   const res = await fetch('/api/projects/from-template', {
-    //     method: 'POST',
-    //     body: JSON.stringify({ templateId: t.id })
-    //   });
-    //   const { projectId } = await res.json();
-    //   goto(`/ide/${projectId}`);
+async function useTemplate(t: Template) {
     console.log('use template', t.slug);
-  }
+}
 </script>
 
   <!-- ── SIDEBAR ── -->

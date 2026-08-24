@@ -1,10 +1,15 @@
+import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is not configured");
+}
 
 export default defineConfig({
   schema: "./src/lib/server/db/schema.js",
   out: "./drizzle",
-  dialect: "sqlite",
+  dialect: "postgresql",
   dbCredentials: {
-    url: "local.db",
+    url: process.env.DATABASE_URL,
   },
 });

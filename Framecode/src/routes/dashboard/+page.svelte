@@ -12,9 +12,31 @@
     let projects = $state(data.projects ?? []);
     let activity = $state(data.activity ?? []);
 
+    type Repo = {
+    name: string;
+    fullName: string;
+    url: string;
+    description: string | null;
+    language: string | null;
+    stars: number;
+    updatedAt: string;
+    isPrivate: boolean;
+    cloneUrl: string;
+};
+
+type Project = {
+    id: string;
+    name: string;
+    framework: string;
+    repoUrl?: string | null;
+    status: string;
+    meterScore?: number | null;
+    templateId?: string | null;
+};
+
     // ── GitHub repos ───────────────────────────────
-    let repos = $state([]);
-    let reposLoading = $state(false);
+let repos = $state<Repo[]>([]);    
+let reposLoading = $state(false);
 
     onMount(() => {
         loadRepos();
@@ -47,21 +69,20 @@
         }
     }
 
-    // ── Import GitHub repo ─────────────────────────
-    async function importRepo(repo) {
-        const res = await fetch("/api/github/import", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(repo)
-        });
+  async function importRepo(repo: Repo) {
+    const res = await fetch("/api/github/import", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(repo)
+    });
 
-        if (res.ok) {
-            const project = await res.json();
-            projects = [project, ...projects];
-        }
+    if (res.ok) {
+        const project = await res.json();
+        projects = [project, ...projects];
     }
+}
 
     // ── Dashboard stats ────────────────────────────
     let stats = $derived([
@@ -1044,10 +1065,10 @@
         <CreateProjectModal
             open={showCreateModal}
             onClose={() => showCreateModal = false}
-            onCreated={(project) => {
-                projects = [project, ...projects];
-                showCreateModal = false;
-            }}
+            onCreated={(project: Project) => {
+    projects = [project, ...projects];
+    showCreateModal = false;
+}}
         />
 
     </main>

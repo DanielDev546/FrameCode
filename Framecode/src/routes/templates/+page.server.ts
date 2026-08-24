@@ -30,15 +30,11 @@ export async function load() {
 // array string (e.g. '["auth","landing"]'). If you're instead storing
 // it as a plain comma-separated string, the catch branch below handles
 // that automatically.
-function parseTags(raw) {
+function parseTags(raw: string | null | undefined) {
   if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
+
+  return raw
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean);
 }

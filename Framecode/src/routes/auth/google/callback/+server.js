@@ -33,13 +33,12 @@ export async function GET({ url, cookies }) {
     const info = await infoRes.json();
     if (!info.email) throw new Error("Could not retrieve email from Google");
 
-    // Upsert user in DB
     const user = await upsertOAuthUser({
       email: info.email,
-      name: info.name,
+      name: info.name ?? info.email,
       avatar: info.picture,
       provider: "google",
-      providerId: info.id,
+      providerId: String(info.id),
     });
 
     // Issue JWT

@@ -2,13 +2,56 @@
 	let { data } = $props();
 
 	let account = $state({
-		email: data.user?.email ?? "daniel@framecode.dev",
+		id: data.user?.id ?? "",
+		email: data.user?.email ?? "",
 		emailVerified: data.user?.emailVerified ?? true,
-		lastPasswordChange: data.user?.lastPasswordChange ?? "4 days ago"
+		lastPasswordChange: data.user?.lastPasswordChange ?? "4 days ago",
+		createdAt: data.user?.createdAt ?? "",
+		githubConnected: !!data.user?.githubToken,
+		githubUsername: data.user?.githubUsername ?? ""
 	});
+
+	let showEmailModal = $state(false);
+	let newEmailInput = $state("");
+	let emailChangeStatus = $state<"idle" | "sending" | "sent" | "error">("idle");
+
+	function changeEmail() {
+		newEmailInput = "";
+		emailChangeStatus = "idle";
+		showEmailModal = true;
+	}
+
+	function closeEmailModal() {
+		showEmailModal = false;
+	}
+
+	async function submitEmailChange() {
+		if (!newEmailInput.includes("@")) return;
+
+		emailChangeStatus = "sending";
+
+		try {
+			const res = await fetch("/api/settings/email", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ newEmail: newEmailInput })
+			});
+
+			if (!res.ok) throw new Error(await res.text());
+
+			emailChangeStatus = "sent";
+		} catch (e) {
+			console.error("Failed to request email change", e);
+			emailChangeStatus = "error";
+		}
+	}
 
 	function changePassword() {
 		console.log("change password");
+	}
+
+	function connectGithub() {
+		window.location.href = "/auth/github";
 	}
 </script>
 
@@ -204,3 +247,72 @@
 	</div>
 
 </div>
+
+<!-- Email Change Modal -->
+{#if showEmailModal}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+
+		<div class="w-full max-w-md rounded-sm border border-white/[0.08] bg-[#0b1018] p-6">
+
+			<h3 class="text-lg font-semibold text-white">
+				Change Email Address
+			</h3>
+
+			{#if emailChangeStatus === "sent"}
+
+				<p class="mt-4 text-sm text-[#5a6478]">
+					A confirmation link has been sent to <span class="text-white">{newEmailInput}</span>.
+					Click it to finish changing your email.
+				</p>
+
+				<button
+					onclick={closeEmailModal}
+					class="mt-6 w-full border border-white/[0.08] px-4 py-2 font-mono text-[11px] uppercase text-[#5a6478] transition hover:text-white"
+				>
+					Close
+				</button>
+
+			{:else}
+
+				<p class="mt-2 text-sm text-[#5a6478]">
+					We'll send a confirmation link to your new address before making the change.
+				</p>
+
+				<input
+					type="email"
+					bind:value={newEmailInput}
+					placeholder="new@email.com"
+					class="mt-4 w-full border border-white/[0.08] bg-transparent px-3 py-2 text-sm text-white outline-none focus:border-[#00ff88]/40"
+				/>
+
+				{#if emailChangeStatus === "error"}
+					<p class="mt-2 text-xs text-red-400">
+						Something went wrong. Try again.
+					</p>
+				{/if}
+
+				<div class="mt-6 flex gap-3">
+
+					<button
+						onclick={closeEmailModal}
+						class="flex-1 border border-white/[0.08] px-4 py-2 font-mono text-[11px] uppercase text-[#5a6478] transition hover:text-white"
+					>
+						Cancel
+					</button>
+
+					<button
+						onclick={submitEmailChange}
+						disabled={emailChangeStatus === "sending" || !newEmailInput.includes("@")}
+						class="flex-1 border border-[#00ff88]/20 bg-[#00ff88]/5 px-4 py-2 font-mono text-[11px] uppercase text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black disabled:opacity-40"
+					>
+						{emailChangeStatus === "sending" ? "Sending..." : "Send Link"}
+					</button>
+
+				</div>
+
+			{/if}
+
+		</div>
+
+	</div>
+{/if}

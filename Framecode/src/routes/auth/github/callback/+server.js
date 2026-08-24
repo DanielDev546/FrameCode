@@ -84,6 +84,8 @@ export async function GET({ url, cookies }) {
 
     redirect(302, "/dashboard");
   } catch (err) {
+    if (isRedirect(err)) throw err;
+
     if (err instanceof Error) {
       console.error("[GitHub OAuth] FAILED AT:", err.message, err.stack);
     } else {

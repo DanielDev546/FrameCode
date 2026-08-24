@@ -120,20 +120,21 @@ export async function createEmailUser({
 // ─────────────────────────────────────────────
 // OAUTH USER
 // ─────────────────────────────────────────────
-
 export async function upsertOAuthUser({
   email,
   name,
   avatar,
   provider,
   providerId,
+  githubUsername,
   githubToken = null,
 }: {
   email: string;
   name: string;
   avatar?: string | null;
-  provider: string;
+  provider: "github" | "google";
   providerId: string;
+  githubUsername?: string | null;
   githubToken?: string | null;
 }) {
   const existing = await findUserByEmail(email);
@@ -146,6 +147,7 @@ export async function upsertOAuthUser({
         avatar,
         provider,
         providerId,
+        githubUsername,
         githubToken,
         updatedAt: new Date(),
       })
@@ -163,6 +165,7 @@ export async function upsertOAuthUser({
       avatar,
       provider,
       providerId,
+      githubUsername,
       githubToken,
       role: "user",
     })
@@ -170,3 +173,49 @@ export async function upsertOAuthUser({
 
   return created[0];
 }
+
+// ─────────────────────────────────────────────
+// EMAIL CHANGE TOKEN
+// ─────────────────────────────────────────────
+
+export function createEmailChangeToken(payload: {
+  userId: string;
+  newEmail: string;
+}) {
+  const options: SignOptions = {
+    expiresIn: "1h",
+  };
+
+  return jwt.sign({ type: "email_change", ...payload }, JWT_SECRET, options);
+}
+
+export function verifyEmailChangeToken(
+  token: string,
+): { userId: string; newEmail: string } | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (typeof decoded !== "object" || decoded === null) {
+      return null;
+    }
+
+    const payload = decoded as JwtPayload & {
+      type?: string;
+      userId?: string;
+      newEmail?: string;
+    };
+
+    if (
+      payload.type !== "email_change" ||
+      typeof payload.userId !== "string" ||
+      typeof payload.newEmail !== "string"
+    ) {
+      return null;
+    }
+
+    return { userId: payload.userId, newEmail: payload.newEmail };
+  } catch {
+    return null;
+  }
+}
+ 

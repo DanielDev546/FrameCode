@@ -19,13 +19,12 @@
     "@sveltejs/adapter-auto": "^7.0.1",
     "@sveltejs/kit": "^2.57.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "drizzle-kit": "^0.31.10",
     "svelte": "^5.55.2",
     "svelte-check": "^4.4.6",
     "typescript": "^6.0.2",
-    "vite": "^8.0.7",
-    "@neondatabase/serverless": "^1.0.0",
-    "dotenv": "^17.0.0"
+    "vite": "^8.0.7"
   },
   "dependencies": {
     "@codemirror/lang-cpp": "^6.0.3",
@@ -52,6 +51,7 @@
     "drizzle-orm": "^0.45.2",
     "jsonwebtoken": "^9.0.3",
     "monaco-editor": "^0.55.1",
+    "resend": "^6.22.0",
     "tailwindcss": "^4.2.4"
   }
 }

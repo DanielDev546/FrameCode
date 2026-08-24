@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1781271966665,
+      "tag": "0000_violet_bruce_banner",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786038535842,
+      "tag": "0001_motionless_rick_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787219678730,
+      "tag": "0002_careful_roxanne_simpson",
+      "breakpoints": true
+    }
+  ]
+}

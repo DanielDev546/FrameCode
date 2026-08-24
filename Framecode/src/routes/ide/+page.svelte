@@ -48,43 +48,19 @@
     dirty = true;
   }
 
+  let redirecting = $state(false)
 
+onMount(() => {
+    const lastProjectId = localStorage.getItem('framecode:lastProjectId')
 
-// ── Save file ──────────────────────────────────
-async function saveFile(path) {
-  const content = fileCache[path]
-  if (content === undefined || !path) return
-
-  saveStatus = 'saving'
-
-  try {
-    const res = await fetch('/api/ide/save', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        projectId: project.id,
-        path,
-        content,
-      }),
-    })
-
-    if (res.ok) {
-      saveStatus = 'saved'
-      // Mark tab as clean
-      openTabs = openTabs.map(t =>
-        t.path === path ? { ...t, dirty: false } : t
-      )
-      // Reset to idle after 2s
-      setTimeout(() => saveStatus = 'idle', 2000)
-    } else {
-      saveStatus = 'error'
-      setTimeout(() => saveStatus = 'idle', 3000)
+    if (lastProjectId) {
+        redirecting = true
+        goto(`/ide/${lastProjectId}`)
     }
-  } catch {
-    saveStatus = 'error'
-    setTimeout(() => saveStatus = 'idle', 3000)
-  }
-}
+})
+
+
+
 
 </script>
 
@@ -93,9 +69,11 @@ async function saveFile(path) {
     <RepoExplorer {repos} onOpenFile={openFile} />
   </aside>
 
+  {#if redirecting}
   <div class="ide-loading">
     <span>Opening last project...</span>
-</div>
+  </div>
+{/if}
 
   <main class="editor-pane">
     {#if loadingFile}

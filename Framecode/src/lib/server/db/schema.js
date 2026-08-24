@@ -52,6 +52,8 @@ export const users = pgTable("users", {
 
   githubToken: text("github_token"),
 
+  githubUsername: text("github_username"),
+
   stripeId: text("stripe_customer_id"),
 
   createdAt: timestamp("created_at", {
