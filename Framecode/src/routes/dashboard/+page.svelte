@@ -23,15 +23,20 @@
     isPrivate: boolean;
     cloneUrl: string;
 };
-
 type Project = {
     id: string;
+    userId: string;
+    templateId: string | null;
     name: string;
+    slug: string;
     framework: string;
-    repoUrl?: string | null;
-    status: string;
-    meterScore?: number | null;
-    templateId?: string | null;
+    repoUrl: string | null;
+    deployUrl: string | null;
+    status: "draft" | "dev" | "live" | "paused";
+    meterScore: number | null;
+    meterData: string | null;
+    createdAt: Date;
+    updatedAt: Date;
 };
 
     // ── GitHub repos ───────────────────────────────
