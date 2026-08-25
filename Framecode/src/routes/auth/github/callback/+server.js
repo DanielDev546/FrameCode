@@ -23,7 +23,7 @@ export async function GET({ url, cookies }) {
           client_id: GITHUB_CLIENT_ID,
           client_secret: GITHUB_CLIENT_SECRET,
           code,
-          redirect_uri: "http://localhost:5173/auth/github/callback",
+          redirect_uri: `${url.origin}/auth/github/callback`,
         }),
       },
     );
