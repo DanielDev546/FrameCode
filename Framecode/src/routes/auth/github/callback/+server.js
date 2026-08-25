@@ -1,13 +1,16 @@
 import { redirect, error, isRedirect } from "@sveltejs/kit";
 import { createJWT, upsertOAuthUser } from "$lib/server/services/auth.js";
-
 import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from "$env/static/private";
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ url, cookies }) {
   const code = url.searchParams.get("code");
-  if (!code) error(400, "Missing OAuth code");
-  console.log("STEP 1 - code:", code);
+
+  if (!code) {
+    throw error(400, "Missing OAuth code");
+  }
+
+  console.log("STEP 1 - code received");
 
   try {
     // Exchange code for access token
@@ -27,45 +30,80 @@ export async function GET({ url, cookies }) {
         }),
       },
     );
-    const { access_token } = await tokenRes.json();
-    if (!access_token) throw new Error("Token exchange failed");
-    console.log("STEP 2 - access_token:", access_token ? "YES" : "NO");
 
-    // Fetch profile
+    const tokenData = await tokenRes.json();
+
+    if (!tokenRes.ok || !tokenData.access_token) {
+      throw new Error(
+        tokenData.error_description ||
+          tokenData.error ||
+          "GitHub token exchange failed",
+      );
+    }
+
+    const access_token = tokenData.access_token;
+
+    console.log("STEP 2 - access_token: YES");
+
+    // Fetch GitHub profile
     const profileRes = await fetch("https://api.github.com/user", {
       headers: {
         Authorization: `Bearer ${access_token}`,
-        Accept: "application/json",
+        Accept: "application/vnd.github+json",
       },
     });
-    const profile = await profileRes.json();
-    console.log("STEP 3 - profile:", profile.login, profile.message);
 
-    // Fetch primary email
+    if (!profileRes.ok) {
+      throw new Error(`GitHub profile request failed: ${profileRes.status}`);
+    }
+
+    const profile = await profileRes.json();
+
+    console.log("STEP 3 - profile:", profile.login);
+
+    // Fetch GitHub emails
     const emailsRes = await fetch("https://api.github.com/user/emails", {
       headers: {
         Authorization: `Bearer ${access_token}`,
-        Accept: "application/json",
+        Accept: "application/vnd.github+json",
       },
     });
+
+    if (!emailsRes.ok) {
+      throw new Error(`GitHub email request failed: ${emailsRes.status}`);
+    }
+
     const emails = await emailsRes.json();
+
     const primary = emails.find(
       /** @param {{ primary?: boolean; verified?: boolean; email?: string }} e */
       (e) => e.primary && e.verified,
     );
 
-    // Upsert user in DB
+    const email = primary?.email ?? profile.email;
+
+    if (!email) {
+      throw new Error("Could not retrieve a verified GitHub email");
+    }
+
+    // Upsert user
     const user = await upsertOAuthUser({
-      email: primary?.email ?? profile.email,
+      email,
       name: profile.name ?? profile.login,
       avatar: profile.avatar_url,
       provider: "github",
       providerId: String(profile.id),
-      githubToken: access_token, // ← add this
+      githubUsername: profile.login,
+      githubToken: access_token,
     });
+
+    if (!user) {
+      throw new Error("Failed to create or update GitHub user");
+    }
+
     console.log("STEP 4 - user:", user.id);
 
-    // Issue JWT
+    // Create JWT
     const token = await createJWT({
       sub: user.id,
       email: user.email,
@@ -74,9 +112,10 @@ export async function GET({ url, cookies }) {
       plan: user.plan ?? "free",
     });
 
+    // Set authentication cookie
     cookies.set("fc_token", token, {
       httpOnly: true,
-      secure: false,
+      secure: url.protocol === "https:",
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
@@ -84,17 +123,14 @@ export async function GET({ url, cookies }) {
 
     redirect(302, "/dashboard");
   } catch (err) {
-    if (isRedirect(err)) throw err;
-
-    if (err instanceof Error) {
-      console.error("[GitHub OAuth] FAILED AT:", err.message, err.stack);
-    } else {
-      console.error("[GitHub OAuth] FAILED AT:", err);
+    if (isRedirect(err)) {
+      throw err;
     }
 
-    throw error(
-      500,
-      `GitHub OAuth failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    const message = err instanceof Error ? err.message : String(err);
+
+    console.error("[GitHub OAuth] FAILED:", message);
+
+    throw error(500, `GitHub OAuth failed: ${message}`);
   }
 }
