@@ -92,6 +92,9 @@ export async function GET({ url, cookies }) {
       console.error("[GitHub OAuth] FAILED AT:", err);
     }
 
-    redirect(302, "/auth/login?error=oauth_failed");
+    throw error(
+      500,
+      `GitHub OAuth failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
