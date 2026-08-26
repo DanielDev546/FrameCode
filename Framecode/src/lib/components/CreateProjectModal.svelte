@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   let { open = false, onClose, onCreated } = $props()
 
   let projectName = $state('')
@@ -48,199 +48,211 @@
       loading = false
     }
   }
-</script>{#if open}
-	<!-- Backdrop -->
-	<div
-		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 py-8 px-4 backdrop-blur-sm"
-	>
-		<!-- Modal -->
-		<div
-			class="w-full max-w-2xl overflow-hidden rounded-sm p-8 border border-[#00ff88]/10 bg-[#070b12] shadow-[0_0_80px_rgba(0,255,136,0.08)]"
-		>
-			<!-- Header -->
-			<div class="border-b border-white/5 px-6 py-5">
-				<p
-					class="font-mono text-[10px] uppercase tracking-[0.25em] text-[#3a4154]"
-				>
-					// CREATE PROJECT
-				</p>
+</script>
 
-				<h2 class="mt-2 text-2xl font-bold text-[#e8edf5]">
-					New Project
-				</h2>
+{#if open}
+  <!-- Backdrop -->
+  <div
+    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 sm:p-6 backdrop-blur-md"
+  >
+    <!-- Modal Container -->
+    <div
+      class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-[#00ff88]/20 bg-[#070b12] shadow-[0_0_80px_rgba(0,255,136,0.12)]"
+    >
+      <!-- Header -->
+      <div class="shrink-0 border-b border-white/10 p-6 sm:p-8">
+        <p class="font-mono text-xs uppercase tracking-[0.25em] text-[#00ff88]">
+          // CREATE PROJECT
+        </p>
 
-				<p class="mt-1 text-sm text-[#5a6478]">
-					Create a new FrameCode project or import an existing repository.
-				</p>
-			</div>
+        <h2 class="mt-2 text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          New Project
+        </h2>
 
-			<!-- Body -->
-			<div class="space-y-6 p-6">
+        <p class="mt-2 text-sm text-[#8a94a8] leading-relaxed">
+          Create a new FrameCode project or import an existing repository.
+        </p>
+      </div>
 
-				<!-- Error -->
-				{#if error}
-					<div
-						class="border border-[#ff4f4f]/40 bg-[#ff4f4f]/5 px-4 py-3 font-mono text-[11px] text-[#ff4f4f]"
-					>
-						✕ {error}
-					</div>
-				{/if}
+      <!-- Body (Scrollable area with wider spacing) -->
+      <div class="space-y-7 overflow-y-auto p-6 sm:p-8 custom-scrollbar">
 
-				<!-- Project Type -->
-				<div>
-					<p
-						class="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
-					>
-						Project Type
-					</p>
+        <!-- Error -->
+        {#if error}
+          <div
+            class="rounded-md border border-[#ff4f4f]/40 bg-[#ff4f4f]/10 px-4 py-3 font-mono text-xs text-[#ff4f4f]"
+          >
+            ✕ {error}
+          </div>
+        {/if}
 
-					<div class="grid grid-cols-2 gap-4">
+        <!-- Project Type -->
+        <div>
+          <p class="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-[#6b768e] font-semibold">
+            Project Type
+          </p>
 
-						<button
-							type="button"
-							onclick={() => projectType = 'framecode'}
-							class="rounded-md border p-5 text-left transition
-							{projectType === 'framecode'
-								? 'border-[#00ff88] bg-[#00ff88]/5'
-								: 'border-white/10 hover:border-[#00ff88]/40'}"
-						>
-							<p class="font-semibold text-[#e8edf5]">
-								FrameCode Project
-							</p>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <button
+              type="button"
+              onclick={() => projectType = 'framecode'}
+              class="rounded-lg border p-5 text-left transition-all duration-150
+              {projectType === 'framecode'
+                ? 'border-[#00ff88] bg-[#00ff88]/10 shadow-[0_0_15px_rgba(0,255,136,0.1)]'
+                : 'border-white/10 hover:border-white/30 bg-white/[0.02]'}"
+            >
+              <p class="font-semibold text-base text-white">
+                FrameCode Project
+              </p>
 
-							<p class="mt-2 text-sm text-[#5a6478]">
-								Start from scratch inside FrameCode.
-							</p>
-						</button>
+              <p class="mt-1.5 text-xs text-[#8a94a8]">
+                Start from scratch inside FrameCode.
+              </p>
+            </button>
 
+            <button
+              type="button"
+              onclick={() => projectType = 'github'}
+              class="rounded-lg border p-5 text-left transition-all duration-150
+              {projectType === 'github'
+                ? 'border-[#00ff88] bg-[#00ff88]/10 shadow-[0_0_15px_rgba(0,255,136,0.1)]'
+                : 'border-white/10 hover:border-white/30 bg-white/[0.02]'}"
+            >
+              <p class="font-semibold text-base text-white">
+                Import GitHub
+              </p>
 
-						<button
-							type="button"
-							onclick={() => projectType = 'github'}
-							class="rounded-md border p-5 text-left transition
-							{projectType === 'github'
-								? 'border-[#00ff88] bg-[#00ff88]/5'
-								: 'border-white/10 hover:border-[#00ff88]/40'}"
-						>
-							<p class="font-semibold text-[#e8edf5]">
-								Import GitHub
-							</p>
+              <p class="mt-1.5 text-xs text-[#8a94a8]">
+                Continue working on an existing repository.
+              </p>
+            </button>
+          </div>
+        </div>
 
-							<p class="mt-2 text-sm text-[#5a6478]">
-								Continue working on an existing repository.
-							</p>
-						</button>
+        <!-- Name -->
+        <div>
+          <label
+            for="project-name-input"
+            class="mb-2.5 block font-mono text-xs uppercase tracking-[0.2em] text-[#6b768e] font-semibold"
+          >
+            Project Name
+          </label>
 
-					</div>
-				</div>
+          <input
+            id="project-name-input"
+            bind:value={projectName}
+            placeholder="awesome-dashboard"
+            class="w-full rounded-lg border border-white/10 bg-[#0d111a] px-4 py-3.5 text-base text-white placeholder-slate-600 outline-none transition focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88]"
+          />
+        </div>
 
+        <!-- Language + Framework -->
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <label
+              for="language-select"
+              class="mb-2.5 block font-mono text-xs uppercase tracking-[0.2em] text-[#6b768e] font-semibold"
+            >
+              Language
+            </label>
 
-				<!-- Name -->
-				<div>
-					<label
-						class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
-					>
-						Project Name
-					</label>
+            <select
+              id="language-select"
+              bind:value={language}
+              class="w-full rounded-lg border border-white/10 bg-[#0d111a] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#00ff88]"
+            >
+              <option>TypeScript</option>
+              <option>JavaScript</option>
+              <option>Python</option>
+              <option>C++</option>
+              <option>Rust</option>
+              <option>Go</option>
+            </select>
+          </div>
 
-					<input
-						bind:value={projectName}
-						placeholder="awesome-dashboard"
-						class="w-full rounded-md border border-white/10 bg-transparent px-4 py-3 text-[#e8edf5] outline-none transition focus:border-[#00ff88]"
-					/>
-				</div>
+          <div>
+            <label
+              for="framework-select"
+              class="mb-2.5 block font-mono text-xs uppercase tracking-[0.2em] text-[#6b768e] font-semibold"
+            >
+              Framework
+            </label>
 
+            <select
+              id="framework-select"
+              bind:value={framework}
+              class="w-full rounded-lg border border-white/10 bg-[#0d111a] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#00ff88]"
+            >
+              <option>SvelteKit</option>
+              <option>React</option>
+              <option>Next.js</option>
+              <option>Vue</option>
+              <option>Astro</option>
+              <option>Elysia</option>
+              <option>None</option>
+            </select>
+          </div>
+        </div>
 
-				<!-- Language + Framework -->
-				<div class="grid grid-cols-2 gap-5">
+        <!-- Visibility -->
+        <div>
+          <label
+            for="visibility-select"
+            class="mb-2.5 block font-mono text-xs uppercase tracking-[0.2em] text-[#6b768e] font-semibold"
+          >
+            Visibility
+          </label>
 
-					<div>
-						<label
-							class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
-						>
-							Language
-						</label>
+          <select
+            id="visibility-select"
+            bind:value={visibility}
+            class="w-full rounded-lg border border-white/10 bg-[#0d111a] px-4 py-3.5 text-sm text-white outline-none transition focus:border-[#00ff88]"
+          >
+            <option value="private">Private</option>
+            <option value="public">Public</option>
+          </select>
+        </div>
 
-						<select
-							bind:value={language}
-							class="w-full rounded-md border border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
-						>
-							<option>TypeScript</option>
-							<option>JavaScript</option>
-							<option>Python</option>
-							<option>C++</option>
-							<option>Rust</option>
-							<option>Go</option>
-						</select>
-					</div>
+      </div>
 
+      <!-- Footer -->
+      <div
+        class="shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-white/10 p-6 sm:px-8 sm:py-6"
+      >
+        <button
+          type="button"
+          onclick={onClose}
+          class="w-full sm:w-auto rounded-md border border-white/10 px-6 py-3 font-mono text-xs uppercase tracking-[0.15em] text-[#8a94a8] transition hover:bg-white/5 hover:text-white"
+        >
+          Cancel
+        </button>
 
-					<div>
-						<label
-							class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
-						>
-							Framework
-						</label>
+        <button
+          type="button"
+          onclick={handleCreate}
+          disabled={loading}
+          class="w-full sm:w-auto rounded-md border border-[#00ff88]/40 bg-[#00ff88]/15 px-8 py-3 font-mono text-xs font-semibold uppercase tracking-[0.15em] text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black disabled:opacity-50 shadow-[0_0_20px_rgba(0,255,136,0.15)]"
+        >
+          {loading ? 'Creating...' : 'Create →'}
+        </button>
+      </div>
 
-						<select
-							bind:value={framework}
-							class="w-full rounded-md border border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
-						>
-							<option>SvelteKit</option>
-							<option>React</option>
-							<option>Next.js</option>
-							<option>Vue</option>
-							<option>Astro</option>
-							<option>Elysia</option>
-							<option>None</option>
-						</select>
-					</div>
-
-				</div>
-
-
-				<!-- Visibility -->
-				<div>
-					<label
-						class="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#3a4154]"
-					>
-						Visibility
-					</label>
-
-					<select
-						bind:value={visibility}
-						class="w-full rounded-md border border-white/10 bg-[#070b12] px-4 py-3 text-[#e8edf5]"
-					>
-						<option value="private">Private</option>
-						<option value="public">Public</option>
-					</select>
-				</div>
-
-			</div>
-
-
-			<!-- Footer -->
-			<div
-				class="flex justify-end gap-3 border-t border-white/5 px-6 py-5"
-			>
-				<button
-					type="button"
-					onclick={onClose}
-					class="border border-white/10 px-5 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#5a6478] transition hover:text-white"
-				>
-					Cancel
-				</button>
-
-				<button
-					type="button"
-					onclick={handleCreate}
-					disabled={loading}
-					class="border border-[#00ff88]/30 bg-[#00ff88]/10 px-6 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-[#00ff88] transition hover:bg-[#00ff88] hover:text-black disabled:opacity-50"
-				>
-					{loading ? 'Creating...' : 'Create →'}
-				</button>
-			</div>
-
-		</div>
-	</div>
+    </div>
+  </div>
 {/if}
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 136, 0.3);
+  }
+</style>
