@@ -3,7 +3,7 @@
     import Topbar from "./Topbar.svelte";
 
     let {
-        active = "dashboard",
+        active = "design",
         data,
         children
     } = $props();
