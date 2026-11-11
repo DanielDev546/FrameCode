@@ -1,40 +1,31 @@
+
 <script lang="ts">
+    let {
+        active = "dashboard",
+        mobileOpen = false,
+        onClose
+    } = $props();
 
-let {
-    active = "dashboard",
-    mobileOpen = false,
-    onClose
-} = $props();
-
-const nav = [
-
-    { id: "dashboard", label: "Dashboard", href: "/dashboard" },
-
-    { id: "templates", label: "Templates", href: "/templates" },
-
-    { id: "ide", label: "IDE", href: "/ide" },
-
-    { id: "meter", label: "AI Meter", href: "/meter" },
-
-    { id: "fork", label: "ForkTools", href: "/fork" },
-
-    { id: "design", label: "Design Hub", href: "/design" }
-
-];
-
+    const nav = [
+        { id: "dashboard", label: "Dashboard", href: "/dashboard" },
+        { id: "templates", label: "Templates", href: "/templates" },
+        { id: "ide", label: "IDE", href: "/ide" },
+        { id: "meter", label: "AI Meter", href: "/meter" },
+        { id: "fork", label: "ForkTools", href: "/fork" },
+        { id: "design", label: "Design Hub", href: "/design" }
+    ];
 </script>
-
 
 <aside
     class="
         fixed inset-y-0 left-0 z-50
         w-[260px]
         shrink-0
-        border-r border-white/[0.05]
+        border-r border-[var(--fc-border)]
         flex flex-col
-        bg-[#070b12]
-
-        transform transition-transform duration-200 ease-out
+        bg-[var(--fc-sidebar)]
+        transition-[transform,background-color,border-color]
+        duration-200 ease-out
 
         md:relative
         md:z-10
@@ -45,35 +36,31 @@ const nav = [
         {mobileOpen ? 'translate-x-0' : '-translate-x-full'}
     "
 >
-
     <!-- LOGO -->
-
-    <div class="
-        h-[52px]
-        shrink-0
-        px-5
-        border-b border-white/[0.05]
-        flex items-center
-        justify-between
-    ">
-
+    <div
+        class="
+            h-[52px]
+            shrink-0
+            px-5
+            border-b border-[var(--fc-border)]
+            flex items-center justify-between
+        "
+    >
         <span class="font-mono text-[13px] font-bold">
 
-            <span class="text-[#3a4154]">[</span>
+            <span class="text-[var(--fc-text-muted)]">[</span>
 
-            <span class="text-[#00ff88]">FC</span>
+            <span class="text-[var(--fc-accent)]">FC</span>
 
-            <span class="text-[#3a4154]">]</span>
+            <span class="text-[var(--fc-text-muted)]">]</span>
 
-            <span class="text-[#e8edf5] ml-1">
+            <span class="ml-1 text-[var(--fc-text)]">
                 FrameCode
             </span>
 
         </span>
 
-
         <!-- Mobile close -->
-
         <button
             type="button"
             onclick={onClose}
@@ -82,115 +69,87 @@ const nav = [
                 md:hidden
                 w-8 h-8
                 flex items-center justify-center
-                border border-white/[0.06]
-                text-[#5a6478]
-                hover:text-[#00ff88]
-                hover:border-[#00ff88]/30
-                transition
+                border border-[var(--fc-border)]
+                text-[var(--fc-text-secondary)]
+                hover:text-[var(--fc-accent)]
+                hover:border-[var(--fc-accent)]/40
+                transition-colors
             "
         >
             ×
         </button>
-
     </div>
 
-
     <!-- NAVIGATION -->
+    <nav class="flex-1 overflow-y-auto py-6">
 
-    <nav class="flex-1 py-6 overflow-y-auto">
-
-        <p class="
-            font-mono
-            text-[9px]
-            text-[#3a4154]
-            uppercase
-            tracking-[0.3em]
-            px-5
-            mb-4
-        ">
+        <p
+            class="
+                px-5 mb-4
+                font-mono text-[9px]
+                text-[var(--fc-text-muted)]
+                uppercase tracking-[0.3em]
+            "
+        >
             Menu
         </p>
 
-
         {#each nav as item}
-
             <a
                 href={item.href}
                 onclick={onClose}
+                aria-current={active === item.id ? "page" : undefined}
                 class="
                     w-full
                     text-left
-                    px-5
-                    py-[11px]
-
-                    font-mono
-                    text-[11px]
+                    px-5 py-[11px]
+                    font-mono text-[11px]
                     tracking-wide
-
-                    transition-all
-
-                    flex
-                    items-center
-                    justify-between
-
+                    transition-colors
+                    flex items-center justify-between
                     no-underline
-
+                    border-l
                     {active === item.id
-                        ? 'text-[#e8edf5] bg-white/[0.04] border-l border-[#00ff88]'
-                        : 'text-[#3a4154] hover:text-[#5a6478] border-l border-transparent'}
+                        ? 'text-[var(--fc-text)] bg-[var(--fc-accent-soft)] border-[var(--fc-accent)]'
+                        : 'text-[var(--fc-text-muted)] hover:text-[var(--fc-text-secondary)] hover:bg-[var(--fc-panel-hover)] border-transparent'}
                 "
             >
-
                 <span>
                     {item.label}
                 </span>
 
                 {#if active === item.id}
-
                     <span
                         class="
-                            w-[4px]
-                            h-[4px]
+                            w-[4px] h-[4px]
                             rounded-full
-                            bg-[#00ff88]
-                            shadow-[0_0_8px_rgba(0,255,136,0.6)]
+                            bg-[var(--fc-accent)]
                         "
                     ></span>
-
                 {/if}
-
             </a>
-
         {/each}
-
     </nav>
 
-
     <!-- BOTTOM -->
-
-    <div class="
-        shrink-0
-        border-t
-        border-white/[0.05]
-        py-4
-    ">
-
+    <div
+        class="
+            shrink-0
+            border-t border-[var(--fc-border)]
+            py-4
+        "
+    >
         <a
             href="/settings"
             onclick={onClose}
             class="
-                block
-                w-full
+                block w-full
                 text-left
-                px-5
-                py-[10px]
-
-                font-mono
-                text-[11px]
-
-                text-[#3a4154]
-                hover:text-[#5a6478]
-
+                px-5 py-[10px]
+                font-mono text-[11px]
+                text-[var(--fc-text-muted)]
+                hover:text-[var(--fc-text)]
+                hover:bg-[var(--fc-panel-hover)]
                 transition-colors
                 no-underline
             "
@@ -198,31 +157,21 @@ const nav = [
             Settings
         </a>
 
-
         <form method="POST" action="/auth/logout">
-
             <button
                 type="submit"
                 class="
                     w-full
                     text-left
-                    px-5
-                    py-[10px]
-
-                    font-mono
-                    text-[11px]
-
-                    text-[#3a4154]
-                    hover:text-[#ff4f4f]
-
+                    px-5 py-[10px]
+                    font-mono text-[11px]
+                    text-[var(--fc-text-muted)]
+                    hover:text-[var(--fc-danger)]
                     transition-colors
                 "
             >
                 Sign out
             </button>
-
         </form>
-
     </div>
-
 </aside>

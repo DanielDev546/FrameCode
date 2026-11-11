@@ -9,6 +9,16 @@ let showDescription = $state(false);
 let showButtons = $state(false);
 let showTerminal = $state(false);
 
+let mobileMenuOpen = $state(false);
+
+const navLinks = [
+  { label: 'Features', href: '/features' },
+  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'AI Meter', href: '/ai-meter' },
+  { label: 'Templates', href: '/templates' },
+  { label: 'ForkTools', href: '/fork-tools' },
+];
+
 $effect(() => {
     setTimeout(() => showTag = true, 150);
     setTimeout(() => showTitle = true, 350);
@@ -78,10 +88,82 @@ setTimeout(() => terminalStep = 5,2700);
   }
 </script>
 
+
+<!-- NAV -->
+<nav class="relative z-20 border-b border-white/[0.08]">
+  <div class="max-w-[1100px] mx-auto px-8 flex items-center justify-between py-[22px]">
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 no-underline">
+      <span class="font-mono text-[18px] font-bold tracking-tight text-[#00ff88]">
+        <span class="text-[#5a6478]">[</span>FC<span class="text-[#5a6478]">]</span>
+        FrameCode
+        <span class="inline-block w-[10px] h-[16px] bg-[#00ff88] ml-[2px] align-middle animate-[blink_1.1s_step-end_infinite]"></span>
+      </span>
+    </a>
+
+    <!-- Desktop nav -->
+    <div class="hidden md:flex items-center gap-7">
+      {#each navLinks as link}
+        <a
+          href={link.href}
+          class="font-mono text-[11px] uppercase tracking-[0.08em] text-[#5a6478] hover:text-[#00ff88] transition-colors no-underline"
+        >
+          {link.label}
+        </a>
+      {/each}
+    </div>
+
+    <!-- CTA -->
+    <div class="hidden md:flex items-center gap-3">
+      <a
+        href="/auth/signup"
+        class="font-mono text-[11px] uppercase tracking-[0.08em] px-4 py-[7px] border border-[#00ff88] text-[#00ff88] bg-[rgba(0,255,136,0.08)] hover:bg-[#00ff88] hover:text-black transition-all no-underline"
+      >
+        Start Free →
+      </a>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button
+      type="button"
+      class="md:hidden font-mono text-[#5a6478] hover:text-[#00ff88] transition-colors"
+      onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+      aria-label="Toggle menu"
+      aria-expanded={mobileMenuOpen}
+    >
+      {mobileMenuOpen ? '✕' : '☰'}
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  {#if mobileMenuOpen}
+    <div class="md:hidden border-t border-white/[0.08] bg-[#0d1420] px-8 py-6 flex flex-col gap-5">
+      {#each navLinks as link}
+        <a
+          href={link.href}
+          class="font-mono text-[11px] uppercase tracking-[0.08em] text-[#5a6478] hover:text-[#00ff88] transition-colors no-underline"
+          onclick={() => (mobileMenuOpen = false)}
+        >
+          {link.label}
+        </a>
+      {/each}
+
+      <a
+        href="/auth/signup"
+        class="font-mono text-[11px] uppercase tracking-[0.08em] px-4 py-[7px] mt-2 border border-[#00ff88] text-[#00ff88] bg-[rgba(0,255,136,0.08)] hover:bg-[#00ff88] hover:text-black transition-all w-fit no-underline"
+        onclick={() => (mobileMenuOpen = false)}
+      >
+        Start Free →
+      </a>
+    </div>
+  {/if}
+</nav>
+
 <div class="max-w-[1100px] mx-auto px-8">
 
   <!-- ─────────────────── HERO ─────────────────── -->
   <section class="pt-20 pb-16">
+  
 
     <!-- Tag -->
 {#if showTag}

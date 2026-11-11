@@ -1,9 +1,10 @@
+
 <script lang="ts">
     import Sidebar from "./Sidebar.svelte";
     import Topbar from "./Topbar.svelte";
 
     let {
-        active = "design",
+        active = "dashboard",
         data,
         children
     } = $props();
@@ -15,38 +16,31 @@
     }
 </script>
 
-<div class="flex h-screen bg-[#070b12] text-[#e8edf5] overflow-hidden">
-
-    <!-- Mobile backdrop -->
+<div class="fc-app flex h-screen overflow-hidden">
     {#if mobileMenuOpen}
         <button
             type="button"
             aria-label="Close navigation"
             onclick={closeMobileMenu}
-            class="fixed inset-0 z-40 bg-black/70 backdrop-blur-[2px] md:hidden"
+            class="fixed inset-0 z-40 bg-[var(--fc-overlay)] backdrop-blur-[2px] md:hidden"
         ></button>
     {/if}
 
-    <!-- Sidebar -->
     <Sidebar
         {active}
         mobileOpen={mobileMenuOpen}
         onClose={closeMobileMenu}
     />
 
-    <!-- Main application -->
-    <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
-
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-[var(--fc-bg)]">
         <Topbar
             {active}
             avatar={data?.user?.avatar}
             onMenu={() => mobileMenuOpen = true}
         />
 
-        <main class="flex-1 min-h-0 overflow-y-auto">
+        <main class="min-h-0 flex-1 overflow-y-auto">
             {@render children()}
         </main>
-
     </div>
-
 </div>

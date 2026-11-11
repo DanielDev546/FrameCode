@@ -1,170 +1,157 @@
+
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import '../app.css';
+    import { onMount, setContext } from 'svelte';
+    import '../app.css';
 
+    import LoadingScreen from '$lib/LoadingScreen.svelte';
 
+    interface Props {
+        children: import('svelte').Snippet;
+    }
 
-	import LoadingScreen from '$lib/LoadingScreen.svelte';
+    let { children }: Props = $props();
 
-	interface Props {
-		children: import('svelte').Snippet;
-	}
+    type Theme = 'dark' | 'light';
 
-	let { children }: Props = $props();
+    interface ThemeContext {
+        get theme(): Theme;
+        setTheme: (nextTheme: Theme) => void;
+        toggleTheme: () => void;
+    }
 
-	/* ---------------- LOADING ---------------- */
+    // ---------------- THEME ----------------
 
-	let loading = $state(true);
+    let theme = $state<Theme>('dark');
 
-	onMount(() => {
-		setTimeout(() => {
-			loading = false;
-		}, 2500); 
-	});
+    function setTheme(nextTheme: Theme) {
+        theme = nextTheme;
 
-	/* ---------------- MOBILE MENU ---------------- */
+        document.documentElement.dataset.theme = nextTheme;
 
-	let mobileMenuOpen = $state(false);
+        localStorage.setItem('framecode-theme', nextTheme);
+    }
 
-	const navLinks = [
-		{ href: '/templates', label: 'Templates' },
-		{ href: '/dashboard', label: 'Dashboard' },
-		{ href: '/fork', label: 'ForkTools' },
-		{ href: '/docs', label: 'Docs' },
-		{ href: 'https://github.com', label: 'GitHub', external: true },
-	];
+    function toggleTheme() {
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+    }
+
+    // Make theme accessible to child components
+    setContext<ThemeContext>('framecode-theme', {
+        get theme() {
+            return theme;
+        },
+        setTheme,
+        toggleTheme
+    });
+
+    // ---------------- LOADING ----------------
+
+    let loading = $state(true);
+
+    onMount(() => {
+        const savedTheme = localStorage.getItem('framecode-theme');
+
+        const systemTheme = window.matchMedia(
+            '(prefers-color-scheme: light)'
+        ).matches ? 'light' : 'dark';
+
+        const initialTheme: Theme =
+            savedTheme === 'light' || savedTheme === 'dark'
+                ? savedTheme
+                : systemTheme;
+
+        setTheme(initialTheme);
+
+        const timer = setTimeout(() => {
+            loading = false;
+        }, 2500);
+
+        return () => clearTimeout(timer);
+    });
 </script>
 
 <!-- Loading Screen -->
 <LoadingScreen visible={loading} />
 
 {#if !loading}
-<div class="min-h-screen bg-[#070b12] text-[#e8edf5] font-sans relative">
+    <div class="fc-app font-sans relative">
 
-	<!-- Grid background -->
-	<div
-		class="fixed inset-0 pointer-events-none z-0"
-		style="
-			background-image:
-				linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
-				linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
-			background-size: 40px 40px;
-		"
-	></div>
+        <!-- Grid background -->
+        <div
+            class="fixed inset-0 pointer-events-none z-0"
+            style="
+                background-image:
+                    linear-gradient(
+                        color-mix(in srgb, var(--fc-text) 3%, transparent)
+                        1px, transparent 1px
+                    ),
+                    linear-gradient(
+                        color-mix(in srgb, var(--fc-accent) 3%, transparent)
+                        1px, transparent 1px
+                    );
+                background-size: 40px 40px;
+            "
+        ></div>
 
-	<!-- Scanlines -->
-	<div
-		class="fixed inset-0 pointer-events-none z-0 opacity-40"
-		style="
-			background: repeating-linear-gradient(
-				0deg,
-				transparent,
-				transparent 2px,
-				rgba(0,0,0,0.08) 2px,
-				rgba(0,0,0,0.08) 4px
-			);
-		"
-	></div>
+        <!-- Scanlines -->
+        <div
+            class="fixed inset-0 pointer-events-none z-0 opacity-30"
+            style="
+                background: repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    color-mix(in srgb, var(--fc-text) 3%, transparent) 2px,
+                    color-mix(in srgb, var(--fc-text) 3%, transparent) 4px
+                );
+            "
+        ></div>
 
-	<!-- NAV -->
-	<nav class="relative z-10 border-b border-white/[0.08]">
-		<div class="max-w-[1100px] mx-auto px-8 flex items-center justify-between py-[22px]">
+        <!-- PAGE CONTENT -->
+        <main class="relative z-10">
+            {@render children()}
+        </main>
 
-			<!-- Logo -->
-			<a href="/" class="flex items-center gap-2 no-underline">
-				<span class="font-mono text-[18px] font-bold tracking-tight text-[#00ff88]">
-					<span class="text-[#5a6478]">[</span>FC<span class="text-[#5a6478]">]</span>
-					FrameCode
-					<span
-						class="inline-block w-[10px] h-[16px] bg-[#00ff88] ml-[2px] align-middle animate-[blink_1.1s_step-end_infinite]"
-					></span>
-				</span>
-			</a>
+        <!-- FOOTER -->
+        <footer class="relative z-10 border-t border-[var(--fc-border)] mt-20">
+            <div class="max-w-[1100px] mx-auto px-8 py-7 flex flex-wrap items-center justify-between gap-4">
 
-			<!-- Desktop nav -->
-			<div class="hidden md:flex items-center gap-7">
-				{#each navLinks as link}
-					<a
-						href={link.href}
-						target={link.external ? '_blank' : undefined}
-						rel={link.external ? 'noopener noreferrer' : undefined}
-						class="font-mono text-[11px] uppercase tracking-[0.08em] text-[#5a6478] hover:text-[#00ff88] transition-colors no-underline"
-					>
-						{link.label}
-					</a>
-				{/each}
-			</div>
+                <span class="font-mono text-[12px] text-[var(--fc-text-muted)]">
+                    © 2026
+                    <span class="text-[var(--fc-accent)]">FrameCode</span>
+                    — Built for engineers.
+                </span>
 
-			<!-- CTA -->
-			<div class="hidden md:flex items-center gap-3">
-			<a href="/auth/signup" class="content">
-				<button
-					class="font-mono text-[11px] uppercase tracking-[0.08em] px-4 py-[6px]
-					border border-[#00ff88] text-[#00ff88] bg-[rgba(0,255,136,0.08)]
-					hover:bg-[#00ff88] hover:text-black transition-all cursor-pointer"
-				>
-					Start Free →
-				</button>
-				</a>
-			</div>
+                <div class="flex items-center gap-5">
 
-			<!-- Mobile hamburger -->
-			<button
-				class="md:hidden font-mono text-[#5a6478] hover:text-[#00ff88] transition-colors"
-				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-				aria-label="Toggle menu"
-			>
-				{mobileMenuOpen ? '✕' : '☰'}
-			</button>
-		</div>
+                    {#each ['Privacy', 'Terms', 'Status', 'Twitter', 'GitHub'] as item}
+                        <a
+                            href="/"
+                            class="font-mono text-[10px] uppercase tracking-[0.08em]
+                            text-[var(--fc-text-muted)] hover:text-[var(--fc-accent)]
+                            transition-colors no-underline"
+                        >
+                            {item}
+                        </a>
+                    {/each}
 
-		<!-- Mobile menu -->
-		{#if mobileMenuOpen}
-			<div class="md:hidden border-t border-white/[0.08] bg-[#0d1420] px-8 py-6 flex flex-col gap-5">
-				{#each navLinks as link}
-					<a
-						href={link.href}
-						class="font-mono text-[11px] uppercase tracking-[0.08em] text-[#5a6478] hover:text-[#00ff88] transition-colors no-underline"
-						onclick={() => (mobileMenuOpen = false)}
-					>
-						{link.label}
-					</a>
-				{/each}
+                    <!-- Theme Toggle -->
+                    <button
+                        type="button"
+                        onclick={toggleTheme}
+                        aria-label="Switch color theme"
+                        class="font-mono text-[11px] px-3 py-2
+                        border border-[var(--fc-border)]
+                        text-[var(--fc-text-secondary)]
+                        hover:border-[var(--fc-accent)]
+                        hover:text-[var(--fc-accent)]
+                        transition-colors cursor-pointer"
+                    >
+                        {theme === 'dark' ? '☀ LIGHT' : '☾ DARK'}
+                    </button>
 
-				<button
-					class="font-mono text-[11px] uppercase tracking-[0.08em] px-4 py-[6px] mt-2
-					border border-[#00ff88] text-[#00ff88] bg-[rgba(0,255,136,0.08)]
-					hover:bg-[#00ff88] hover:text-black transition-all w-fit cursor-pointer"
-				>
-					Start Free →
-				</button>
-			</div>
-		{/if}
-	</nav>
-
-	<!-- PAGE CONTENT -->
-	<main class="relative z-10">
-		{@render children()}
-	</main>
-
-	<!-- FOOTER -->
-	<footer class="relative z-10 border-t border-white/[0.08] mt-20">
-		<div class="max-w-[1100px] mx-auto px-8 py-7 flex flex-wrap items-center justify-between gap-3">
-			<span class="font-mono text-[12px] text-[#5a6478]">
-				© 2026 <span class="text-[#00ff88]">FrameCode</span> — Built for engineers.
-			</span>
-
-			<div class="flex gap-5">
-				{#each ['Privacy', 'Terms', 'Status', 'Twitter', 'GitHub'] as item}
-					<a
-						href="/"
-						class="font-mono text-[10px] uppercase tracking-[0.08em] text-[#3a4154] hover:text-[#00ff88] transition-colors no-underline"
-					>
-						{item}
-					</a>
-				{/each}
-			</div>
-		</div>
-	</footer>
-</div>
+                </div>
+            </div>
+        </footer>
+    </div>
 {/if}

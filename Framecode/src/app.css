@@ -1,1 +1,191 @@
 @import "tailwindcss";
+
+/* ==========================================
+   FRAMECODE DESIGN SYSTEM
+   Version 1.0
+========================================== */
+
+/* DARK MODE — DEFAULT */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Brand */
+  --fc-accent: #00ff88;
+  --fc-accent-hover: #33ffa1;
+  --fc-accent-soft: rgba(0, 255, 136, 0.1);
+  --fc-on-accent: #04130c;
+
+  /* Surfaces */
+  --fc-bg: #070b12;
+  --fc-sidebar: #0a1019;
+  --fc-panel: #0d1420;
+  --fc-panel-raised: #111c2a;
+  --fc-panel-hover: #142131;
+  --fc-input: #090f18;
+
+  /* Typography */
+  --fc-text: #e8edf5;
+  --fc-text-secondary: #a0aec0;
+  --fc-text-muted: #718096;
+  --fc-text-subtle: #536176;
+
+  /* Borders */
+  --fc-border: #1c2736;
+  --fc-border-strong: #2a394c;
+
+  /* Semantic */
+  --fc-success: #00d982;
+  --fc-warning: #ffb340;
+  --fc-danger: #ff626b;
+  --fc-info: #45c7ee;
+
+  /* Effects */
+  --fc-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+  --fc-overlay: rgba(0, 0, 0, 0.62);
+
+  /* UI */
+  --fc-radius-sm: 3px;
+  --fc-radius-md: 6px;
+  --fc-radius-lg: 10px;
+  --fc-transition: 150ms ease;
+}
+
+/* ==========================================
+   LIGHT MODE — TECHNICAL
+========================================== */
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Brand */
+  --fc-accent: #008a52;
+  --fc-accent-hover: #007346;
+  --fc-accent-soft: rgba(0, 138, 82, 0.09);
+  --fc-on-accent: #ffffff;
+
+  /* Surfaces */
+  --fc-bg: #f5f7fa;
+  --fc-sidebar: #edf1f5;
+  --fc-panel: #ffffff;
+  --fc-panel-raised: #f8fafc;
+  --fc-panel-hover: #e8eef3;
+  --fc-input: #ffffff;
+
+  /* Typography */
+  --fc-text: #17212f;
+  --fc-text-secondary: #526174;
+  --fc-text-muted: #68788c;
+  --fc-text-subtle: #8492a6;
+
+  /* Borders */
+  --fc-border: #dce3ea;
+  --fc-border-strong: #c5d0dc;
+
+  /* Semantic */
+  --fc-success: #087a4b;
+  --fc-warning: #98600a;
+  --fc-danger: #c33442;
+  --fc-info: #126b91;
+
+  /* Effects */
+  --fc-shadow: 0 10px 30px rgba(22, 35, 50, 0.09);
+  --fc-overlay: rgba(14, 24, 36, 0.42);
+}
+
+/* ==========================================
+   APPLICATION BASE
+========================================== */
+
+html,
+body {
+  min-height: 100%;
+  background: var(--fc-bg);
+  color: var(--fc-text);
+  transition:
+    background-color var(--fc-transition),
+    color var(--fc-transition);
+}
+
+body {
+  margin: 0;
+}
+
+::selection {
+  background: var(--fc-accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--fc-accent);
+  outline-offset: 2px;
+}
+
+/* ==========================================
+   REUSABLE FRAMECODE CLASSES
+========================================== */
+
+.fc-app {
+  min-height: 100vh;
+  background: var(--fc-bg);
+  color: var(--fc-text);
+}
+
+.fc-sidebar {
+  background: var(--fc-sidebar);
+  border-color: var(--fc-border);
+}
+
+.fc-panel {
+  background: var(--fc-panel);
+  border: 1px solid var(--fc-border);
+}
+
+.fc-panel-raised {
+  background: var(--fc-panel-raised);
+  border: 1px solid var(--fc-border);
+}
+
+.fc-input {
+  color: var(--fc-text);
+  background: var(--fc-input);
+  border: 1px solid var(--fc-border);
+}
+
+.fc-input::placeholder {
+  color: var(--fc-text-subtle);
+}
+
+.fc-muted {
+  color: var(--fc-text-muted);
+}
+
+.fc-secondary {
+  color: var(--fc-text-secondary);
+}
+
+.fc-accent {
+  color: var(--fc-accent);
+}
+
+.fc-accent-bg {
+  color: var(--fc-on-accent);
+  background: var(--fc-accent);
+}
+
+.fc-divider {
+  border-color: var(--fc-border);
+}
+
+/* ==========================================
+   ACCESSIBILITY
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -9,7 +9,7 @@
     import DangerZone from "$lib/components/settings/DangerZone.svelte";
 
     let { data } = $props();
-    let section = $state("profile");
+    let section = $state("profile");    
 </script>
 
 <DashboardLayout active="settings" {data}>
