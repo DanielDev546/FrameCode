@@ -8,6 +8,10 @@ export async function load({ locals }) {
     redirect(302, "/auth/login");
   }
 
+  const t = performance.now();
+  const result = await db.select();
+  console.log("[TIME] project query", Math.round(performance.now() - t), "ms");
+
   const user = await db.query.users.findFirst({
     where: eq(users.id, locals.user.id),
   });
