@@ -74,6 +74,7 @@
 <LoadingScreen visible={loading} />
 
 {#if !loading}
+
     <div class="fc-app font-sans relative">
 
         <!-- Grid background -->
@@ -135,20 +136,7 @@
                         </a>
                     {/each}
 
-                    <!-- Theme Toggle -->
-                    <button
-                        type="button"
-                        onclick={toggleTheme}
-                        aria-label="Switch color theme"
-                        class="font-mono text-[11px] px-3 py-2
-                        border border-[var(--fc-border)]
-                        text-[var(--fc-text-secondary)]
-                        hover:border-[var(--fc-accent)]
-                        hover:text-[var(--fc-accent)]
-                        transition-colors cursor-pointer"
-                    >
-                        {theme === 'dark' ? '☀ LIGHT' : '☾ DARK'}
-                    </button>
+                   
 
                 </div>
             </div>

@@ -72,22 +72,25 @@ export async function load({ params, locals }) {
     }
   }
 
-  // ── Load scaffold for FC-only projects ────────
+  // ── Load saved files (template scaffold + IDE edits) ──
+  // Read for EVERY project, GitHub-linked or not. The save route
+  // stores edits in meterData.scaffold for all projects, so the
+  // load must read them back for all projects too.
   let scaffoldFiles = {};
 
-  if (!project.repoUrl && project.meterData) {
+  if (project.meterData) {
     try {
       const meta = JSON.parse(project.meterData);
       scaffoldFiles = meta.scaffold ?? {};
     } catch {
-      /* no scaffold */
+      /* meterData isn't valid JSON — treat as no saved files */
     }
   }
 
   console.log("[IDE LOAD]", {
     projectId: project.id,
-    meterData: project.meterData,
-    scaffoldFiles,
+    githubFiles: fileTree.length,
+    savedFiles: Object.keys(scaffoldFiles),
   });
 
   // ── Return ────────────────────────────────────

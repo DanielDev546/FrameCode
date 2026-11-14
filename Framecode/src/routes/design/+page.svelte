@@ -1,144 +1,206 @@
 
 <script lang="ts">
-
-  import DashboardLayout from "$lib/layout/DashboardLayout.svelte";
+    import DashboardLayout from "$lib/layout/DashboardLayout.svelte";
+    import {
+        WandSparkles,
+        Globe,
+        AppWindow
+    } from "@lucide/svelte";
 
     let { data } = $props();
 
-  import { Sparkles, WandSparkles, Globe, AppWindow } from '@lucide/svelte';
+    let promptText = $state("");
+    let selectedPlatform = $state<"App" | "Web">("App");
 
-  let promptText = $state('');
-  let selectedPlatform = $state<'App' | 'Web'>('App');
+    function generateUI() {
+        if (!promptText.trim()) return;
 
-  function generateUI() {
-    if (!promptText.trim()) return;
+        // Connect your existing FrameEngine generation logic here.
+        console.log({
+            prompt: promptText,
+            platform: selectedPlatform
+        });
+    }
 
-    // Connect your existing FrameEngine generation logic here.
-    console.log({
-      prompt: promptText,
-      platform: selectedPlatform
+    // One greeting per time bucket.
+    const buckets = [
+        { start: 7, end: 12, text: "Morning SuperDev!" },
+        { start: 12, end: 16, text: "Heyy, still grinding?" },
+        { start: 16, end: 20, text: "Always Active" },
+        { start: 2, end: 7, text: "Night owl" }
+    ];
+
+    const lateSession = "Let's have one more session before bed";
+
+    let greeting = $state("");
+
+    function getGreeting(hour: number): string {
+        const match = buckets.find(
+            (b) => hour >= b.start && hour < b.end
+        );
+
+        return match ? match.text : lateSession;
+    }
+
+    $effect(() => {
+        greeting = getGreeting(new Date().getHours());
+
+        const id = setInterval(() => {
+            greeting = getGreeting(new Date().getHours());
+        }, 60_000);
+
+        return () => clearInterval(id);
     });
-  }
-  // one greeting per bucket, no randomness
-// one greeting per bucket, no randomness
-const buckets = [
-  { start: 7,  end: 12, text: 'Morning SuperDev!' },
-  { start: 12, end: 16, text: 'Heyy, still grinding?' },
-  { start: 16, end: 20, text: 'Always Active' },
-  { start: 2,  end: 7,  text: 'Night owl' }
-];
-
-// 20:00 to 01:59 wraps past midnight, so it's whatever the buckets don't match
-const lateSession = 'Let’s have one more session before bed';
-
-let greeting = $state('');
-
-function getGreeting(hour: number): string {
-  const match = buckets.find((b) => hour >= b.start && hour < b.end);
-  return match ? match.text : lateSession;
-}
-
-  $effect(() => {
-    greeting = getGreeting(new Date().getHours());
-
-    const id = setInterval(() => {
-      greeting = getGreeting(new Date().getHours());
-    }, 60_000);
-
-    return () => clearInterval(id);
-  });
 </script>
 
-
-
 <svelte:head>
- <img src="favicon.svg" class="w-26 h-26" alt="FrameCode Logo" />
-  <meta
-    name="description"
-    content="Describe your idea and bring your next interface to life with FrameCode."
-  />
+    <meta
+        name="description"
+        content="Describe your idea and bring your next interface to life with FrameCode."
+    />
 </svelte:head>
 
 <DashboardLayout {data}>
-<main class="min-h-screen bg-[#070b12] text-[#e8edf5] flex items-center justify-center px-5 py-12">
-  <div class="w-full max-w-3xl">
+    <main class="
+        min-h-full
+        flex items-center justify-center
+        bg-[var(--fc-bg)]
+        px-4 py-10 sm:px-5 sm:py-12
+        text-[var(--fc-text)]
+        transition-colors
+    ">
+        <div class="w-full max-w-3xl">
 
-    <!-- Centered branding -->
-    <header class="mb-12 text-center">
-      <div class="mb-5 flex flex-col items-center justify-center gap-">
-       <img src="/favicon.svg" class="w-40 h-30 rounded-lg" alt="FrameCode Logo" />
+            <!-- Centered branding -->
+            <header class="mb-10 text-center sm:mb-12">
+                <div class="flex flex-col items-center justify-center">
+                    <img
+                        src="/favicon.svg"
+                        class="mb-5 h-28 w-36 rounded-lg object-contain sm:h-30 sm:w-40"
+                        alt="FrameCode Logo"
+                    />
 
-      
+                    <p class="
+                        text-lg font-medium
+                        text-[var(--fc-text-secondary)]
+                        sm:text-xl
+                    ">
+                        {greeting}
+                    </p>
+                </div>
+            </header>
 
+            <!-- Prompt sandbox -->
+            <section class="
+                mt-2 rounded-xl
+                border border-[var(--fc-border)]
+                bg-[var(--fc-panel)]
+                p-4 sm:p-6
+                shadow-[var(--fc-shadow)]
+                transition-colors
+            ">
+                <div class="
+                    mb-4 flex items-center gap-2
+                    text-sm text-[var(--fc-text-secondary)]
+                ">
+                    <WandSparkles
+                        size={17}
+                        class="text-[var(--fc-accent)]"
+                    />
+                    <span>New design</span>
+                </div>
 
+                <textarea
+                    bind:value={promptText}
+                    rows="3"
+                    placeholder="Describe the interface you want to create..."
+                    aria-label="Describe the interface you want to create"
+                    class="
+                        w-full max-h-40 resize-y
+                        bg-transparent
+                        text-sm leading-6
+                        text-[var(--fc-text)]
+                        outline-none
+                        placeholder:text-[var(--fc-text-subtle)]
+                        sm:text-base
+                    "
+                ></textarea>
 
-      <p class="text-xl font-medium text-slate-300">
-        {greeting}
-      </p>
-      </div>
+                <div class="
+                    mt-2 flex flex-wrap items-center
+                    justify-between gap-4
+                    border-t border-[var(--fc-border)]
+                    pt-4
+                ">
+                    <!-- Platform selector -->
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onclick={() => selectedPlatform = "App"}
+                            aria-pressed={selectedPlatform === "App"}
+                            class="
+                                flex items-center gap-2
+                                rounded-lg border
+                                px-3 py-2
+                                text-sm transition-colors
+                                {selectedPlatform === "App"
+                                    ? 'border-[var(--fc-accent)] bg-[var(--fc-accent-soft)] text-[var(--fc-accent)]'
+                                    : 'border-[var(--fc-border)] text-[var(--fc-text-muted)] hover:border-[var(--fc-border-strong)] hover:text-[var(--fc-text)]'}
+                            "
+                        >
+                            <AppWindow size={16} />
+                            App
+                        </button>
 
-     
+                        <button
+                            type="button"
+                            onclick={() => selectedPlatform = "Web"}
+                            aria-pressed={selectedPlatform === "Web"}
+                            class="
+                                flex items-center gap-2
+                                rounded-lg border
+                                px-3 py-2
+                                text-sm transition-colors
+                                {selectedPlatform === "Web"
+                                    ? 'border-[var(--fc-accent)] bg-[var(--fc-accent-soft)] text-[var(--fc-accent)]'
+                                    : 'border-[var(--fc-border)] text-[var(--fc-text-muted)] hover:border-[var(--fc-border-strong)] hover:text-[var(--fc-text)]'}
+                            "
+                        >
+                            <Globe size={16} />
+                            Web
+                        </button>
+                    </div>
 
-     
-    </header>
+                    <!-- Generate button -->
+                    <button
+                        type="button"
+                        onclick={generateUI}
+                        disabled={!promptText.trim()}
+                        class="
+                            flex items-center gap-2
+                            rounded-lg
+                            bg-[var(--fc-accent)]
+                            px-3 py-2
+                            text-sm font-semibold
+                            text-[var(--fc-on-accent)]
+                            transition-colors
+                            hover:opacity-90
+                            disabled:cursor-not-allowed
+                            disabled:opacity-40
+                        "
+                    >
+                        Generate UI
+                        <WandSparkles size={16} />
+                    </button>
+                </div>
+            </section>
 
-    <!-- Prompt sandbox -->
-    <section class=" mt-2 rounded-xl border border-slate-800 bg-[#0c0f15] p-4 shadow-2xl sm:p-6">
-      <div class="mb-4 flex items-center gap-2 text-sm text-slate-300">
-        <WandSparkles size={17} class="text-[#00ff88]" />
-        <span>New design</span>
-      </div>
-
-      <textarea
-        bind:value={promptText}
-        rows="3"
-        placeholder="Describe the interface you want to create..."
-        class="w-full resize-y bg-transparent text-sm leading-5 max-h-40 text-white outline-none placeholder:text-slate-600 sm:text-base"
-      ></textarea>
-
-      <div class="mt-2 flex flex-wrap items-center justify-between gap-4 border-t border-slate-800 pt-4">
-        <div class="flex items-center gap-2">
-          <button
-            onclick={() => selectedPlatform = 'App'}
-            class={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition ${
-              selectedPlatform === 'App'
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-[#00ff88]'
-                : 'border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <AppWindow size={16} />
-            App
-          </button> 
-
-          <button
-            onclick={() => selectedPlatform = 'Web'}
-            class={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
-              selectedPlatform === 'Web'
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-[#00ff88]'
-                : 'border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Globe size={16} />
-            Web
-          </button>
+            <p class="
+                mt-5 text-center text-xs
+                text-[var(--fc-text-muted)]
+            ">
+                Powered by FrameEngine · Turn your ideas into reality.
+            </p>
         </div>
-
-        <button
-          onclick={generateUI}
-          disabled={!promptText.trim()}
-          class="flex items-center gap-2 rounded-lg bg-[#00ff88] px-3 py-1.5 text-sm font-semibold text-[#07110c] transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Generate UI
-          <WandSparkles size={16} />
-        </button>
-      </div>
-    </section>
-
-    <p class="mt-5 text-center text-xs text-slate-600">
-      Powered by FrameEngine · Turn your ideas into reality.
-    </p>
-
-  </div>
-</main>
-
+    </main>
 </DashboardLayout>
