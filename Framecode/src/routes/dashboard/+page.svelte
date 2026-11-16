@@ -152,14 +152,17 @@
                         Welcome back to FrameCode.
                     </p>
                 </div>
-
+<a href="project">
+    
                 <button
-                    onclick={openCreateModal}
+                    
                     class="w-full cursor-pointer border border-[var(--fc-accent)]/30 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--fc-accent)] transition-colors hover:border-[var(--fc-accent)]/60 hover:bg-[var(--fc-accent-soft)] sm:w-auto sm:py-[8px] sm:text-[11px]"
                 >
                     + New Project
                 </button>
+                 </a>
             </div>
+       
 
             <!-- STATS -->
             <div class="mb-7 grid grid-cols-2 gap-px border border-[var(--fc-border)] bg-[var(--fc-border)] md:mb-8 md:grid-cols-4">

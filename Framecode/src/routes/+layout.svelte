@@ -78,21 +78,23 @@
     <div class="fc-app font-sans relative">
 
         <!-- Grid background -->
-        <div
-            class="fixed inset-0 pointer-events-none z-0"
-            style="
-                background-image:
-                    linear-gradient(
-                        color-mix(in srgb, var(--fc-text) 3%, transparent)
-                        1px, transparent 1px
-                    ),
-                    linear-gradient(
-                        color-mix(in srgb, var(--fc-accent) 3%, transparent)
-                        1px, transparent 1px
-                    );
-                background-size: 40px 40px;
-            "
-        ></div>
+      <!-- Grid background -->
+<div
+    class="fixed inset-0 pointer-events-none z-0"
+    style="
+        background-image:
+            linear-gradient(
+                color-mix(in srgb, var(--fc-text) 6%, transparent) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                90deg,
+                color-mix(in srgb, var(--fc-accent) 6%, transparent) 1px,
+                transparent 1px
+            );
+        background-size: 40px 40px;
+    "
+></div>
 
         <!-- Scanlines -->
         <div
