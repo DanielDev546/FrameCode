@@ -6,6 +6,7 @@ import {
   real,
   boolean,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // ─── USERS ────────────────────────────────────────────────────────
@@ -157,6 +158,52 @@ export const projects = pgTable(
 
   (table) => ({
     userIdIdx: index("projects_user_id_idx").on(table.userId),
+  }),
+);
+
+// ─── PROJECT FILES ────────────────────────────────────────────────
+export const projectFiles = pgTable(
+  "project_files",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, {
+        onDelete: "cascade",
+      }),
+
+    path: text("path").notNull(),
+
+    type: text("type", {
+      enum: ["file", "folder"],
+    }).notNull(),
+
+    content: text("content").default(""),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+
+  (table) => ({
+    projectIdIdx: index("project_files_project_id_idx").on(table.projectId),
+
+    projectPathUnique: uniqueIndex("project_files_project_path_unique").on(
+      table.projectId,
+      table.path,
+    ),
   }),
 );
 

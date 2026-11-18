@@ -1,8 +1,304 @@
 // @ts-nocheck
 
+function getLanguageScaffold(language, framework, projectName) {
+  const name =
+    projectName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "my-project";
+
+  const className =
+    projectName
+      .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase())
+      .replace(/^[^a-zA-Z]+/, "") || "Main";
+
+  // JAVA
+  if (language === "Java") {
+    if (framework === "Gradle") {
+      return {
+        "settings.gradle": `rootProject.name = '${name}'`,
+
+        "build.gradle": `plugins {
+    id 'java'
+}
+
+group = 'com.framecode'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}`,
+
+        "src/main/java/Main.java": `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from ${projectName}!");
+    }
+}`,
+
+        "README.md": `# ${projectName}
+
+Java project powered by Gradle.
+
+## Run
+
+\`\`\`bash
+gradle run
+\`\`\`
+`,
+        ".gitignore": "build/\n.gradle/\n*.class\n",
+      };
+    }
+
+    // Default Java build system: Maven
+    return {
+      "pom.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.framecode</groupId>
+    <artifactId>${name}</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>5.10.2</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>\${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>`,
+
+      "src/main/java/Main.java": `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from ${projectName}!");
+    }
+}`,
+
+      "src/test/java/MainTest.java": `import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class MainTest {
+    @Test
+    void applicationStarts() {
+        assertTrue(true);
+    }
+}`,
+
+      "README.md": `# ${projectName}
+
+Java project powered by Maven.
+
+## Run
+
+\`\`\`bash
+mvn compile
+mvn exec:java -Dexec.mainClass="Main"
+\`\`\`
+`,
+      ".gitignore": "target/\n*.class\n",
+    };
+  }
+
+  // C++
+  if (language === "C++") {
+    if (framework === "Make") {
+      return {
+        "src/main.cpp": `#include <iostream>
+
+int main() {
+    std::cout << "Hello from ${projectName}!" << std::endl;
+    return 0;
+}`,
+
+        Makefile: `CXX = g++
+CXXFLAGS = -std=c++20 -Wall -Wextra
+TARGET = app
+SOURCE = src/main.cpp
+
+all:
+	$(CXX) $(CXXFLAGS) $(SOURCE) -o $(TARGET)
+
+run: all
+	./$(TARGET)
+
+clean:
+	rm -f $(TARGET)
+`,
+        "README.md": `# ${projectName}
+
+C++ project using Make.
+
+## Build and run
+
+\`\`\`bash
+make
+make run
+\`\`\`
+`,
+        ".gitignore": "app\n*.o\nbuild/\n",
+      };
+    }
+
+    return {
+      "CMakeLists.txt": `cmake_minimum_required(VERSION 3.20)
+project(${className} LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_executable(${name} src/main.cpp)`,
+
+      "src/main.cpp": `#include <iostream>
+
+int main() {
+    std::cout << "Hello from ${projectName}!" << std::endl;
+    return 0;
+}`,
+
+      "README.md": `# ${projectName}
+
+C++ project using CMake.
+
+## Build
+
+\`\`\`bash
+cmake -S . -B build
+cmake --build build
+./build/${name}
+\`\`\`
+`,
+      ".gitignore": "build/\n*.o\n*.exe\n",
+    };
+  }
+
+  // PYTHON
+  if (language === "Python") {
+    return {
+      "main.py": `def main():
+    print("Hello from ${projectName}!")
+
+
+if __name__ == "__main__":
+    main()`,
+
+      "requirements.txt": "",
+
+      "README.md": `# ${projectName}
+
+Python project.
+
+## Run
+
+\`\`\`bash
+python main.py
+\`\`\`
+`,
+      ".gitignore": "__pycache__/\n*.py[cod]\n.venv/\nvenv/\n",
+    };
+  }
+
+  // RUST
+  if (language === "Rust") {
+    return {
+      "Cargo.toml": `[package]
+name = "${name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+`,
+
+      "src/main.rs": `fn main() {
+    println!("Hello from ${projectName}!");
+}`,
+
+      "README.md": `# ${projectName}
+
+Rust project powered by Cargo.
+
+## Run
+
+\`\`\`bash
+cargo run
+\`\`\`
+`,
+      ".gitignore": "target/\n",
+    };
+  }
+
+  // GO
+  if (language === "Go") {
+    return {
+      "go.mod": `module example.com/${name}
+
+go 1.23`,
+
+      "main.go": `package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello from ${projectName}!")
+}`,
+
+      "README.md": `# ${projectName}
+
+Go project using Go Modules.
+
+## Run
+
+\`\`\`bash
+go run .
+\`\`\`
+`,
+      ".gitignore": "bin/\n*.exe\n",
+    };
+  }
+
+  // Let the existing framework templates handle JS and TS.
+  return null;
+}
+
 export function getScaffold(framework, language, projectName) {
   const name = projectName.toLowerCase().replace(/\s+/g, "-");
   const isTS = language === "TypeScript";
+
+  const languageScaffold = getLanguageScaffold(
+    language,
+    framework,
+    projectName,
+  );
+
+  if (languageScaffold) {
+    return languageScaffold;
+  }
 
   const scaffolds = {
     React: {
@@ -383,6 +679,11 @@ const { title } = Astro.props
       "index.js": `// ${projectName}\nconsole.log('Hello from ${projectName}')\n`,
     },
   };
+
+  const files = getScaffold("Maven", "Java", "FrameCode Test");
+
+  console.log(Object.keys(files));
+  console.log(files["src/main/java/Main.java"]);
 
   return scaffolds[framework] ?? scaffolds["None"];
 }

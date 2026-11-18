@@ -15,6 +15,13 @@
       "when": 1787502630093,
       "tag": "0001_familiar_the_captain",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795013300201,
+      "tag": "0002_optimal_blue_blade",
+      "breakpoints": true
     }
   ]
 }
