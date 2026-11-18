@@ -1,0 +1,653 @@
+]633;E;{   echo "===== WORKSPACE API ====="\x3b   cat src/lib/workspace-api.js\x3b    echo "===== WORKSPACE SERVER ====="\x3b   cat src/lib/server/workspace.js\x3b    echo "===== FILES ROUTE ====="\x3b   cat src/routes/api/workspace/files/+server.js\x3b    echo "===== FILE ROUTE ====="\x3b   cat src/routes/api/workspace/file/+server.js\x3b    echo "===== FOLDER ROUTE ====="\x3b   cat src/routes/api/workspace/folder/+server.js\x3b    echo "===== RENAME ROUTE ====="\x3b   cat src/routes/api/workspace/rename/+server.js\x3b    echo "===== DELETE ROUTE ====="\x3b   cat src/routes/api/workspace/delete/+server.js\x3b } > workspace-backend-review.txt;5cc088a5-b86a-444b-8d32-80fcdfa47b51]633;C===== WORKSPACE API =====
+async function request(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      result.message ?? result.error ?? "Workspace request failed",
+    );
+  }
+
+  return result;
+}
+
+export const workspaceAPI = {
+  list(projectId) {
+    return request(
+      `/api/workspace/files?projectId=${encodeURIComponent(projectId)}`,
+    );
+  },
+
+  read(projectId, path) {
+    return request(
+      `/api/workspace/file?projectId=${encodeURIComponent(projectId)}&path=${encodeURIComponent(path)}`,
+    );
+  },
+
+  create(projectId, path, type = "file", content = "") {
+    return request("/api/workspace/files", {
+      method: "POST",
+      body: JSON.stringify({
+        projectId,
+        path,
+        type,
+        content,
+      }),
+    });
+  },
+
+  createFolder(projectId, path) {
+    return request("/api/workspace/folder", {
+      method: "POST",
+      body: JSON.stringify({ projectId, path }),
+    });
+  },
+
+  save(projectId, path, content) {
+    return request("/api/workspace/file", {
+      method: "PUT",
+      body: JSON.stringify({
+        projectId,
+        path,
+        content,
+      }),
+    });
+  },
+
+  rename(projectId, path, newPath) {
+    return request("/api/workspace/rename", {
+      method: "POST",
+      body: JSON.stringify({
+        projectId,
+        path,
+        newPath,
+      }),
+    });
+  },
+
+  delete(projectId, path) {
+    return request("/api/workspace/delete", {
+      method: "DELETE",
+      body: JSON.stringify({
+        projectId,
+        path,
+      }),
+    });
+  },
+};
+===== WORKSPACE SERVER =====
+import { error } from "@sveltejs/kit";
+import { and, eq } from "drizzle-orm";
+import { db } from "$lib/server/db/index.js";
+import { projects, projectFiles } from "$lib/server/db/schema.js";
+
+export function normalizePath(path) {
+  if (typeof path !== "string" || !path.trim()) {
+    throw error(400, "A file path is required");
+  }
+
+  const normalized = path.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+
+  if (
+    !normalized ||
+    normalized
+      .split("/")
+      .some((segment) => !segment || segment === "." || segment === "..")
+  ) {
+    throw error(400, "Invalid file path");
+  }
+
+  return normalized;
+}
+
+export async function getOwnedProject(projectId, userId) {
+  if (!projectId) {
+    throw error(400, "projectId is required");
+  }
+
+  const result = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+    .limit(1);
+
+  if (!result[0]) {
+    throw error(404, "Project not found");
+  }
+
+  return result[0];
+}
+
+export async function ensureFolder(projectId, folderPath) {
+  const path = normalizePath(folderPath);
+
+  const existing = await db
+    .select()
+    .from(projectFiles)
+    .where(
+      and(eq(projectFiles.projectId, projectId), eq(projectFiles.path, path)),
+    )
+    .limit(1);
+
+  if (existing[0]) {
+    if (existing[0].type !== "folder") {
+      throw error(409, `${path} already exists as a file`);
+    }
+
+    return existing[0];
+  }
+
+  const created = await db
+    .insert(projectFiles)
+    .values({
+      projectId,
+      path,
+      type: "folder",
+      content: "",
+    })
+    .returning();
+
+  return created[0];
+}
+
+export async function ensureParentFolders(projectId, path) {
+  const segments = path.split("/");
+  segments.pop();
+
+  let current = "";
+
+  for (const segment of segments) {
+    current = current ? `${current}/${segment}` : segment;
+    await ensureFolder(projectId, current);
+  }
+}
+
+export async function migrateScaffold(project) {
+  let metadata = {};
+
+  try {
+    metadata = project.meterData ? JSON.parse(project.meterData) : {};
+  } catch {
+    metadata = {};
+  }
+
+  // Migration should happen only once.
+  if (metadata.workspaceMigrated) {
+    return metadata.scaffold ?? {};
+  }
+
+  const scaffold = metadata.scaffold ?? {};
+
+  for (const [rawPath, content] of Object.entries(scaffold)) {
+    const path = normalizePath(rawPath);
+
+    await ensureParentFolders(project.id, path);
+
+    const existing = await db
+      .select()
+      .from(projectFiles)
+      .where(
+        and(
+          eq(projectFiles.projectId, project.id),
+          eq(projectFiles.path, path),
+        ),
+      )
+      .limit(1);
+
+    if (existing[0]) continue;
+
+    await db.insert(projectFiles).values({
+      projectId: project.id,
+      path,
+      type: "file",
+      content:
+        typeof content === "string"
+          ? content
+          : JSON.stringify(content, null, 2),
+    });
+  }
+
+  metadata.workspaceMigrated = true;
+
+  await db
+    .update(projects)
+    .set({
+      meterData: JSON.stringify(metadata),
+    })
+    .where(eq(projects.id, project.id));
+
+  return scaffold;
+}
+
+export async function initializeWorkspace(projectId, userId) {
+  const project = await getOwnedProject(projectId, userId);
+  await migrateScaffold(project);
+  return project;
+}
+
+export function buildFileTree(files) {
+  const root = [];
+
+  for (const file of files) {
+    const segments = file.path.split("/");
+    let current = root;
+
+    for (let i = 0; i < segments.length; i++) {
+      const name = segments[i];
+      const fullPath = segments.slice(0, i + 1).join("/");
+      const isLast = i === segments.length - 1;
+
+      let node = current.find((item) => item.path === fullPath);
+
+      if (!node) {
+        node = {
+          name,
+          path: fullPath,
+          type: isLast ? file.type : "folder",
+          children: [],
+        };
+
+        current.push(node);
+      }
+
+      if (isLast && file.type === "file") {
+        node.content = file.content ?? "";
+      }
+
+      current = node.children;
+    }
+  }
+
+  function sortNodes(nodes) {
+    nodes.sort((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === "folder" ? -1 : 1;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+
+    for (const node of nodes) {
+      sortNodes(node.children);
+    }
+
+    return nodes;
+  }
+
+  return sortNodes(root);
+}
+===== FILES ROUTE =====
+import { json, error } from "@sveltejs/kit";
+import { and, eq } from "drizzle-orm";
+import { db } from "$lib/server/db/index.js";
+import { projectFiles } from "$lib/server/db/schema.js";
+
+import {
+  initializeWorkspace,
+  normalizePath,
+  ensureParentFolders,
+} from "$lib/server/workspace.js";
+
+export async function GET({ url, locals }) {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const projectId = url.searchParams.get("projectId");
+  const path = normalizePath(url.searchParams.get("path"));
+
+  const project = await initializeWorkspace(projectId, locals.user.id);
+
+  const result = await db
+    .select()
+    .from(projectFiles)
+    .where(
+      and(eq(projectFiles.projectId, project.id), eq(projectFiles.path, path)),
+    )
+    .limit(1);
+
+  if (!result[0]) {
+    throw error(404, "File not found");
+  }
+
+  if (result[0].type !== "file") {
+    throw error(400, "The requested path is a folder");
+  }
+
+  return json({
+    success: true,
+    file: result[0],
+  });
+}
+
+export async function PUT({ request, locals }) {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const body = await request.json();
+  const { projectId, path, content } = body;
+
+  if (!projectId || !path || content === undefined) {
+    throw error(400, "projectId, path and content are required");
+  }
+
+  if (typeof content !== "string") {
+    throw error(400, "File content must be a string");
+  }
+
+  const project = await initializeWorkspace(projectId, locals.user.id);
+
+  const normalizedPath = normalizePath(path);
+
+  await ensureParentFolders(project.id, normalizedPath);
+
+  const existing = await db
+    .select()
+    .from(projectFiles)
+    .where(
+      and(
+        eq(projectFiles.projectId, project.id),
+        eq(projectFiles.path, normalizedPath),
+      ),
+    )
+    .limit(1);
+
+  if (existing[0] && existing[0].type !== "file") {
+    throw error(400, "Cannot save content to a folder");
+  }
+
+  if (existing[0]) {
+    await db
+      .update(projectFiles)
+      .set({
+        content,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(projectFiles.projectId, project.id),
+          eq(projectFiles.path, normalizedPath),
+        ),
+      );
+  } else {
+    await db.insert(projectFiles).values({
+      projectId: project.id,
+      path: normalizedPath,
+      type: "file",
+      content,
+    });
+  }
+
+  return json({
+    success: true,
+    saved: true,
+    projectId,
+    path: normalizedPath,
+  });
+}
+===== FILE ROUTE =====
+import { json, error } from "@sveltejs/kit";
+import { and, eq } from "drizzle-orm";
+import { db } from "$lib/server/db/index.js";
+import { projects } from "$lib/server/db/schema.js";
+
+export async function GET({ url, locals }) {
+  // 1. Authenticate
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  // 2. Get projectId
+  const projectId = url.searchParams.get("projectId");
+
+  if (!projectId) {
+    throw error(400, "projectId is required");
+  }
+
+  // 3. Get file path
+  const path = url.searchParams.get("path");
+
+  if (!path) {
+    throw error(400, "path is required");
+  }
+
+  // 4. Verify that the project belongs to the user
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, locals.user.id)))
+    .limit(1);
+
+  if (!project[0]) {
+    throw error(404, "Project not found");
+  }
+
+  // 5. Get the requested file
+  // TODO: query the workspace files table here
+
+  return json({
+    success: true,
+    projectId,
+    path,
+  });
+}
+===== FOLDER ROUTE =====
+import { json, error } from "@sveltejs/kit";
+
+import {
+  initializeWorkspace,
+  normalizePath,
+  ensureFolder,
+} from "$lib/server/workspace.js";
+
+export async function POST({ request, locals }) {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const { projectId, path } = await request.json();
+
+  if (!projectId || !path) {
+    throw error(400, "projectId and path are required");
+  }
+
+  const project = await initializeWorkspace(projectId, locals.user.id);
+
+  const normalizedPath = normalizePath(path);
+
+  const folder = await ensureFolder(project.id, normalizedPath);
+
+  return json({
+    success: true,
+    folder,
+  });
+}
+===== RENAME ROUTE =====
+import { json, error } from "@sveltejs/kit";
+import { and, eq, like } from "drizzle-orm";
+import { db } from "$lib/server/db/index.js";
+import { projectFiles } from "$lib/server/db/schema.js";
+
+import {
+  initializeWorkspace,
+  normalizePath,
+  ensureParentFolders,
+} from "$lib/server/workspace.js";
+
+export async function POST({ request, locals }) {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const { projectId, path, newPath } = await request.json();
+
+  if (!projectId || !path || !newPath) {
+    throw error(400, "projectId, path and newPath are required");
+  }
+
+  const project = await initializeWorkspace(projectId, locals.user.id);
+
+  const oldPath = normalizePath(path);
+  const destination = normalizePath(newPath);
+
+  if (oldPath === destination) {
+    return json({ success: true, unchanged: true });
+  }
+
+  if (destination.startsWith(`${oldPath}/`)) {
+    throw error(400, "Cannot move a folder inside itself");
+  }
+
+  const sourceResult = await db
+    .select()
+    .from(projectFiles)
+    .where(
+      and(
+        eq(projectFiles.projectId, project.id),
+        eq(projectFiles.path, oldPath),
+      ),
+    )
+    .limit(1);
+
+  const source = sourceResult[0];
+
+  if (!source) {
+    throw error(404, "Source not found");
+  }
+
+  const isFolder = source.type === "folder";
+
+  const entries = isFolder
+    ? await db
+        .select()
+        .from(projectFiles)
+        .where(eq(projectFiles.projectId, project.id))
+    : [source];
+
+  const affected = entries.filter(
+    (entry) => entry.path === oldPath || entry.path.startsWith(`${oldPath}/`),
+  );
+
+  const destinations = affected.map((entry) =>
+    entry.path === oldPath
+      ? destination
+      : `${destination}${entry.path.slice(oldPath.length)}`,
+  );
+
+  // Check that destination paths are not occupied
+  // by entries outside the source being renamed.
+  for (const targetPath of destinations) {
+    const conflict = await db
+      .select()
+      .from(projectFiles)
+      .where(
+        and(
+          eq(projectFiles.projectId, project.id),
+          eq(projectFiles.path, targetPath),
+        ),
+      )
+      .limit(1);
+
+    if (conflict[0] && !affected.some((entry) => entry.id === conflict[0].id)) {
+      throw error(409, `Destination already exists: ${targetPath}`);
+    }
+  }
+
+  // Create destination parent folders.
+  await ensureParentFolders(project.id, destination);
+
+  // Rename descendants before the parent.
+  affected.sort((a, b) => b.path.length - a.path.length);
+
+  for (const entry of affected) {
+    const targetPath =
+      entry.path === oldPath
+        ? destination
+        : `${destination}${entry.path.slice(oldPath.length)}`;
+
+    await db
+      .update(projectFiles)
+      .set({
+        path: targetPath,
+        updatedAt: new Date(),
+      })
+      .where(eq(projectFiles.id, entry.id));
+  }
+
+  return json({
+    success: true,
+    oldPath,
+    newPath: destination,
+    renamed: affected.length,
+  });
+}
+===== DELETE ROUTE =====
+import { json, error } from "@sveltejs/kit";
+import { eq } from "drizzle-orm";
+import { db } from "$lib/server/db/index.js";
+import { projectFiles } from "$lib/server/db/schema.js";
+
+import { initializeWorkspace, normalizePath } from "$lib/server/workspace.js";
+
+async function deleteEntry({ request, locals }) {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const body = await request.json();
+
+  const projectId =
+    body.projectId ?? new URL(request.url).searchParams.get("projectId");
+
+  const path = body.path ?? new URL(request.url).searchParams.get("path");
+
+  if (!projectId || !path) {
+    throw error(400, "projectId and path are required");
+  }
+
+  const project = await initializeWorkspace(projectId, locals.user.id);
+
+  const normalizedPath = normalizePath(path);
+
+  const allFiles = await db
+    .select()
+    .from(projectFiles)
+    .where(eq(projectFiles.projectId, project.id));
+
+  const affected = allFiles.filter(
+    (entry) =>
+      entry.path === normalizedPath ||
+      entry.path.startsWith(`${normalizedPath}/`),
+  );
+
+  if (!affected.length) {
+    throw error(404, "Entry not found");
+  }
+
+  for (const entry of affected) {
+    await db.delete(projectFiles).where(eq(projectFiles.id, entry.id));
+  }
+
+  return json({
+    success: true,
+    deleted: normalizedPath,
+    count: affected.length,
+  });
+}
+
+export async function DELETE(event) {
+  return deleteEntry(event);
+}
+
+export async function POST(event) {
+  return deleteEntry(event);
+}

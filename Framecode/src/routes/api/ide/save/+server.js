@@ -1,33 +1,21 @@
-// @ts-nocheck
 import { json, error } from "@sveltejs/kit";
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "$lib/server/db/index.js";
-import { projects } from "$lib/server/db/schema.js";
+import { projects, projectFiles } from "$lib/server/db/schema.js";
+
+import {
+  initializeWorkspace,
+  normalizePath,
+  ensureParentFolders,
+} from "$lib/server/workspace.js";
 
 export async function POST({ request, locals }) {
+  if (!locals.user) {
+    return json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    console.log("[IDE SAVE] Request received");
-
-    // ─────────────────────────────────────
-    // Authentication
-    // ─────────────────────────────────────
-
-    if (!locals.user) {
-      console.log("[IDE SAVE] No authenticated user");
-      return json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    console.log("[IDE SAVE] User:", locals.user.id);
-
-    // ─────────────────────────────────────
-    // Request body
-    // ─────────────────────────────────────
-
     const { projectId, path, content } = await request.json();
-
-    console.log("[IDE SAVE] projectId:", projectId);
-    console.log("[IDE SAVE] path:", path);
-    console.log("[IDE SAVE] content length:", content?.length);
 
     if (!projectId || !path || content === undefined) {
       return json(
@@ -36,81 +24,84 @@ export async function POST({ request, locals }) {
       );
     }
 
-    // ─────────────────────────────────────
-    // Find project
-    // ─────────────────────────────────────
+    if (typeof content !== "string") {
+      return json({ message: "Content must be a string" }, { status: 400 });
+    }
 
-    const projectResult = await db
+    const project = await initializeWorkspace(projectId, locals.user.id);
+
+    const normalizedPath = normalizePath(path);
+
+    await ensureParentFolders(project.id, normalizedPath);
+
+    const existing = await db
       .select()
-      .from(projects)
+      .from(projectFiles)
       .where(
-        and(eq(projects.id, projectId), eq(projects.userId, locals.user.id)),
+        and(
+          eq(projectFiles.projectId, project.id),
+          eq(projectFiles.path, normalizedPath),
+        ),
       )
       .limit(1);
 
-    console.log("[IDE SAVE] Project found:", !!projectResult[0]);
-
-    if (!projectResult[0]) {
-      return json({ message: "Project not found" }, { status: 404 });
+    if (existing[0] && existing[0].type !== "file") {
+      return json({ message: "Cannot save a folder" }, { status: 400 });
     }
 
-    const project = projectResult[0];
-
-    // ─────────────────────────────────────
-    // Read existing meterData
-    // ─────────────────────────────────────
-
-    let currentMeta = {};
-
-    if (project.meterData) {
-      try {
-        currentMeta = JSON.parse(project.meterData);
-      } catch (parseError) {
-        console.error("[IDE SAVE] meterData JSON parse failed:", parseError);
-
-        currentMeta = {};
-      }
+    if (existing[0]) {
+      await db
+        .update(projectFiles)
+        .set({
+          content,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(projectFiles.projectId, project.id),
+            eq(projectFiles.path, normalizedPath),
+          ),
+        );
+    } else {
+      await db.insert(projectFiles).values({
+        projectId: project.id,
+        path: normalizedPath,
+        type: "file",
+        content,
+      });
     }
 
-    // ─────────────────────────────────────
-    // Update scaffold
-    // ─────────────────────────────────────
+    // Keep legacy scaffold metadata synchronized.
+    const metadata = project.meterData ? JSON.parse(project.meterData) : {};
 
-    const scaffold = currentMeta.scaffold ?? {};
-
-    scaffold[path] = content;
-
-    console.log("[IDE SAVE] Saving file to FrameCode:", path);
-
-    // ─────────────────────────────────────
-    // Update project
-    // ─────────────────────────────────────
+    const scaffold = metadata.scaffold ?? {};
+    scaffold[normalizedPath] = content;
 
     await db
       .update(projects)
       .set({
         meterData: JSON.stringify({
-          ...currentMeta,
+          ...metadata,
           scaffold,
         }),
         updatedAt: new Date(),
       })
-      .where(eq(projects.id, projectId));
-
-    console.log("[IDE SAVE] Save successful");
+      .where(eq(projects.id, project.id));
 
     return json({
       saved: true,
       target: "framecode",
-      path,
+      path: normalizedPath,
     });
   } catch (err) {
-    console.error("[IDE SAVE] FAILED:", err);
+    console.error("[IDE SAVE]", err);
+
+    if (err?.status) throw err;
 
     return json(
       {
         message: "Failed to save file",
-        error: err instanceof Error ? err.message : String(err),
+        error: err.message,
       },
       { status: 500 },
     );

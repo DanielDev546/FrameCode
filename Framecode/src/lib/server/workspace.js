@@ -93,6 +93,11 @@ export async function migrateScaffold(project) {
     metadata = {};
   }
 
+  // Migration should happen only once.
+  if (metadata.workspaceMigrated) {
+    return metadata.scaffold ?? {};
+  }
+
   const scaffold = metadata.scaffold ?? {};
 
   for (const [rawPath, content] of Object.entries(scaffold)) {
@@ -123,6 +128,15 @@ export async function migrateScaffold(project) {
           : JSON.stringify(content, null, 2),
     });
   }
+
+  metadata.workspaceMigrated = true;
+
+  await db
+    .update(projects)
+    .set({
+      meterData: JSON.stringify(metadata),
+    })
+    .where(eq(projects.id, project.id));
 
   return scaffold;
 }

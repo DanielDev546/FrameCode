@@ -2,7 +2,7 @@
 <script lang="ts">
     import DashboardLayout from '$lib/layout/DashboardLayout.svelte'
     import { onMount, onDestroy } from 'svelte'
-
+    import FileExplorer from '$lib/components/ide/FileExplorer.svelte'
     import { EditorState } from '@codemirror/state'
     import {
         EditorView,
@@ -43,6 +43,27 @@
     import { html } from '@codemirror/lang-html'
     import { json } from '@codemirror/lang-json'
     import { markdown } from '@codemirror/lang-markdown'
+
+
+    async function createFile(path: string) {
+    console.log('Create file:', path)
+}
+
+async function createFolder(path: string) {
+    console.log('Create folder:', path)
+}
+
+async function renameEntry(oldPath: string, newPath: string) {
+    console.log('Rename:', oldPath, newPath)
+}
+
+async function deleteEntry(path: string) {
+    console.log('Delete:', path)
+}
+
+async function refreshWorkspace() {
+    console.log('Refresh workspace')
+}
 
     type FileNode = {
         path: string
@@ -1017,68 +1038,19 @@ createApp(__component).mount('#app');
                         {fileTree.length} files
                     </span>
                 </div>
-
-                <!-- FILE TREE -->
-                <div class="flex-1 overflow-y-auto py-2 [scrollbar-width:none]">
-                    {#if fileTree.length === 0}
-                        <div class="px-4 py-3 font-mono text-[10px] text-[var(--fc-text-muted)]">
-                            {hasGitHub ? 'Loading files...' : 'Empty project'}
-                        </div>
-                    {:else}
-                        <!-- DIRECTORIES -->
-                        {#each [...folderTree].sort() as dir}
-                            {#if isDirVisible(dir)}
-                                <button
-                                    type="button"
-                                    onclick={() => toggleDir(dir)}
-                                    class="
-                                        w-full text-left flex items-center gap-[6px] py-[5px]
-                                        text-[var(--fc-text-secondary)]
-                                        hover:text-[var(--fc-text)]
-                                        hover:bg-[var(--fc-panel-hover)]
-                                        transition-colors
-                                    "
-                                    style="padding-left: {12 + (dir.split('/').length - 1) * 14}px"
-                                >
-                                    <span class="font-mono text-[9px] text-[var(--fc-text-muted)] w-[10px]">
-                                        {expandedDirs.includes(dir) ? '▾' : '▸'}
-                                    </span>
-
-                                    <span class="font-mono text-[11px]">
-                                        {dir.split('/').pop()}
-                                    </span>
-                                </button>
-                            {/if}
-                        {/each}
-
-                        <!-- FILES -->
-                        {#each fileTree as file}
-                            {#if isFileVisible(file.path)}
-                                <button
-                                    type="button"
-                                    onclick={() => openFile(file.path)}
-                                    class="
-                                        w-full text-left flex items-center gap-[6px] py-[5px]
-                                        transition-colors
-                                        {activeFilePath === file.path
-                                            ? 'bg-[var(--fc-accent-soft)] text-[var(--fc-text)]'
-                                            : 'text-[var(--fc-text-secondary)] hover:text-[var(--fc-text)] hover:bg-[var(--fc-panel-hover)]'}
-                                    "
-                                    style="padding-left: {12 + (file.path.split('/').length - 1) * 14}px"
-                                >
-                                    <span
-                                        class="w-[5px] h-[5px] rounded-full shrink-0"
-                                        style="background:{langDot(file.path)}; opacity:0.7;"
-                                    ></span>
-
-                                    <span class="font-mono text-[11px] truncate">
-                                        {file.path.split('/').pop()}
-                                    </span>
-                                </button>
-                            {/if}
-                        {/each}
-                    {/if}
-                </div>
+<FileExplorer
+    files={fileTree.map((file) => ({
+        path: file.path,
+        type: 'file' as const
+    }))}
+    activeFilePath={activeFilePath}
+    onOpen={openFile}
+    onCreateFile={createFile}
+    onCreateFolder={createFolder}
+    onRename={renameEntry}
+    onDelete={deleteEntry}
+    onRefresh={refreshWorkspace}
+/>
 
                 <!-- DASHBOARD -->
                 <div class="border-t border-[var(--fc-border)] p-3">
