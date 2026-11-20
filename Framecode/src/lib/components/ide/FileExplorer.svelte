@@ -416,55 +416,104 @@
         {/if}
     </div>
 
-    <!-- DIALOG -->
-    {#if dialog}
-        <div class="dialog-overlay">
-            <div class="dialog">
+<!-- DIALOG -->
+{#if dialog}
+    <div
+        class="dialog-overlay"
+        role="presentation"
+        onclick={(event) => {
+            if (event.target === event.currentTarget) closeDialog()
+        }}
+    >
+        <div
+            class="dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="explorer-dialog-title"
+        >
+            <div class="dialog-header">
+                <div>
+                    <p class="dialog-eyebrow">FRAMECODE / EXPLORER</p>
 
-                <div class="dialog-header">
-                    <span>
+                    <h3 id="explorer-dialog-title">
                         {dialog === 'file'
-                            ? 'NEW FILE'
+                            ? 'Create new file'
                             : dialog === 'folder'
-                                ? 'NEW FOLDER'
-                                : 'RENAME'}
-                    </span>
-
-                    <button onclick={closeDialog} disabled={busy}>×</button>
+                                ? 'Create new folder'
+                                : 'Rename item'}
+                    </h3>
                 </div>
 
-                <label>PATH</label>
+                <button
+                    type="button"
+                    class="dialog-close"
+                    onclick={closeDialog}
+                    disabled={busy}
+                >
+                    ×
+                </button>
+            </div>
 
-                <input
-                    bind:value={inputPath}
-                    autofocus
-                    placeholder="src/components/example.svelte"
-                    onkeydown={(event) => {
-                        if (event.key === 'Enter') submitDialog()
-                        if (event.key === 'Escape') closeDialog()
-                    }}
-                />
+            <label for="explorer-path">
+                {dialog === 'rename' ? 'NEW PATH' : 'FILE / FOLDER PATH'}
+            </label>
 
-                {#if errorMessage}
-                    <p class="dialog-error">{errorMessage}</p>
-                {/if}
+            <input
+                id="explorer-path"
+                bind:value={inputPath}
+                autofocus
+                placeholder="src/components/example.svelte"
+                disabled={busy}
+                onkeydown={(event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault()
+                        submitDialog()
+                    }
 
-                <div class="dialog-footer">
-                    <button class="cancel-button" onclick={closeDialog}>
-                        Cancel
-                    </button>
+                    if (event.key === 'Escape') {
+                        closeDialog()
+                    }
+                }}
+            />
 
-                    <button
-                        class="confirm-button"
-                        onclick={submitDialog}
-                        disabled={busy}
-                    >
-                        {busy ? 'Working...' : 'Confirm'}
-                    </button>
+            <p class="dialog-hint">
+                Use / to create nested directories.
+            </p>
+
+            {#if errorMessage}
+                <div class="dialog-error">
+                    {errorMessage}
                 </div>
+            {/if}
+
+            <div class="dialog-footer">
+                <button
+                    type="button"
+                    class="cancel-button"
+                    onclick={closeDialog}
+                    disabled={busy}
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="confirm-button"
+                    onclick={submitDialog}
+                    disabled={busy || !inputPath.trim()}
+                >
+                    {busy
+                        ? 'Working...'
+                        : dialog === 'file'
+                            ? 'Create file'
+                            : dialog === 'folder'
+                                ? 'Create folder'
+                                : 'Rename'}
+                </button>
             </div>
         </div>
-    {/if}
+    </div>
+{/if}
 </div>
 
 <style>
@@ -694,86 +743,193 @@
         color: var(--fc-accent);
     }
 
-    .dialog-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(3px);
-    }
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
 
-    .dialog {
-        width: 100%;
-        max-width: 380px;
-        padding: 16px;
-        background: var(--fc-panel);
-        border: 1px solid var(--fc-border-strong);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-    }
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    .dialog-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 18px;
-        font-family: monospace;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.1em;
-    }
+    padding: 20px;
 
-    .dialog-header button {
-        font-size: 18px;
-        color: var(--fc-text-muted);
-    }
+    background: rgba(2, 5, 10, 0.82);
+}
 
-    .dialog label {
-        display: block;
-        margin-bottom: 7px;
-        font-family: monospace;
-        font-size: 9px;
-        letter-spacing: 0.1em;
-        color: var(--fc-text-muted);
-    }
+.dialog {
+    width: 100%;
+    max-width: 420px;
 
-    .dialog input {
-        width: 100%;
-        padding: 10px;
-        font-family: monospace;
-        font-size: 11px;
-        color: var(--fc-text);
-        background: var(--fc-bg);
-        border: 1px solid var(--fc-border);
-        outline: none;
-    }
+    padding: 22px;
 
-    .dialog input:focus {
-        border-color: var(--fc-accent);
-    }
+    background: #0c121c;
+    color: #e8edf5;
 
-    .dialog-error {
-        margin-top: 8px;
-        font-size: 10px;
-        color: var(--fc-danger);
-    }
+    border: 1px solid #273345;
+    border-top: 2px solid #00ff88;
 
-    .dialog-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 16px;
-    }
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.75),
+        0 0 30px rgba(0, 255, 136, 0.04);
 
-    .dialog-footer button {
-        padding: 8px 12px;
-        font-family: monospace;
-        font-size: 10px;
-    }
+    border-radius: 8px;
+}
 
+.dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    margin-bottom: 24px;
+}
+
+.dialog-eyebrow {
+    font-family: monospace;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: #00ff88;
+
+    margin-bottom: 8px;
+}
+
+.dialog-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e8edf5;
+}
+
+.dialog-close {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 22px;
+    color: #8995a8;
+
+    border: 1px solid #273345;
+    border-radius: 4px;
+}
+
+.dialog-close:hover {
+    color: #ff6b6b;
+    background: #151d29;
+}
+
+.dialog label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-family: monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+
+    color: #8b98aa;
+}
+
+.dialog input {
+    width: 100%;
+    height: 42px;
+
+    padding: 0 12px;
+
+    font-family: monospace;
+    font-size: 12px;
+
+    color: #e8edf5;
+    background: #070b12;
+
+    border: 1px solid #273345;
+    border-radius: 4px;
+
+    outline: none;
+    transition: border-color 150ms;
+}
+
+.dialog input:focus {
+    border-color: #00ff88;
+    box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.08);
+}
+
+.dialog input::placeholder {
+    color: #566276;
+}
+
+.dialog-hint {
+    margin-top: 8px;
+
+    font-family: monospace;
+    font-size: 9px;
+    color: #647186;
+}
+
+.dialog-error {
+    margin-top: 12px;
+    padding: 10px;
+
+    font-family: monospace;
+    font-size: 10px;
+
+    color: #ff8585;
+    background: rgba(255, 80, 80, 0.08);
+
+    border: 1px solid rgba(255, 80, 80, 0.2);
+    border-radius: 4px;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    margin-top: 24px;
+}
+
+.dialog-footer button {
+    height: 34px;
+    padding: 0 14px;
+
+    font-family: monospace;
+    font-size: 10px;
+
+    border-radius: 4px;
+    transition: 150ms;
+}
+
+.cancel-button {
+    color: #a1adbd;
+    border: 1px solid #273345;
+}
+
+.cancel-button:hover {
+    background: #151d29;
+    color: #e8edf5;
+}
+
+.confirm-button {
+    color: #06110b;
+    background: #00ff88;
+    border: 1px solid #00ff88;
+    font-weight: 700;
+}
+
+.confirm-button:hover {
+    background: #00dc77;
+}
+
+.confirm-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.dialog button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
     .cancel-button {
         color: var(--fc-text-muted);
     }

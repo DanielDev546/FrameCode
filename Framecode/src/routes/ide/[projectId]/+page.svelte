@@ -45,25 +45,9 @@
     import { markdown } from '@codemirror/lang-markdown'
 
 
-    async function createFile(path: string) {
-    console.log('Create file:', path)
-}
+   
 
-async function createFolder(path: string) {
-    console.log('Create folder:', path)
-}
 
-async function renameEntry(oldPath: string, newPath: string) {
-    console.log('Rename:', oldPath, newPath)
-}
-
-async function deleteEntry(path: string) {
-    console.log('Delete:', path)
-}
-
-async function refreshWorkspace() {
-    console.log('Refresh workspace')
-}
 
     type FileNode = {
         path: string
@@ -134,6 +118,139 @@ async function refreshWorkspace() {
         repo = parts[1] ?? ''
     }
 
+    // File 
+    async function workspaceRequest(
+    url: string,
+    method: string,
+    body?: Record<string, unknown>
+) {
+    const res = await fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        ...(body ? { body: JSON.stringify(body) } : {})
+    })
+
+    if (!res.ok) {
+        const message = await res.text()
+        throw new Error(message || `Request failed (${res.status})`)
+    }
+
+    return res.status === 204 ? null : res.json()
+}
+
+async function refreshWorkspace() {
+    const result = await workspaceRequest(
+        `/api/workspace/files?projectId=${encodeURIComponent(project.id)}`,
+        'GET'
+    )
+
+    const files = result?.files ?? result?.fileTree ?? []
+
+    fileTree = files
+        .filter((entry: any) => entry.type !== 'folder')
+        .map((entry: any) => ({
+            path: entry.path,
+            sha: null,
+            size: entry.size ?? 0
+        }))
+}
+
+async function createFile(path: string) {
+    await workspaceRequest('/api/workspace/files', 'POST', {
+        projectId: project.id,
+        path,
+        type: 'file',
+        content: ''
+    })
+
+    fileCache[path] = ''
+    await refreshWorkspace()
+
+    activeFilePath = path
+    addTab(path)
+    createEditor('', path)
+}
+
+async function createFolder(path: string) {
+    await workspaceRequest('/api/workspace/folder', 'POST', {
+        projectId: project.id,
+        path
+    })
+
+    await refreshWorkspace()
+}
+
+async function renameEntry(oldPath: string, newPath: string) {
+    await workspaceRequest('/api/workspace/rename', 'POST', {
+        projectId: project.id,
+        oldPath,
+        newPath
+    })
+
+    // Move cached content if this is a file.
+    if (fileCache[oldPath] !== undefined) {
+        fileCache[newPath] = fileCache[oldPath]
+        delete fileCache[oldPath]
+    }
+
+    // Update open tabs.
+    openTabs = openTabs.map((tab) => {
+        if (tab.path === oldPath || tab.path.startsWith(`${oldPath}/`)) {
+            const updatedPath = tab.path.replace(oldPath, newPath)
+
+            return {
+                ...tab,
+                path: updatedPath,
+                name: updatedPath.split('/').pop() ?? updatedPath
+            }
+        }
+
+        return tab
+    })
+
+    if (
+        activeFilePath === oldPath ||
+        activeFilePath.startsWith(`${oldPath}/`)
+    ) {
+        activeFilePath = activeFilePath.replace(oldPath, newPath)
+    }
+
+    await refreshWorkspace()
+}
+
+async function deleteEntry(path: string) {
+    await workspaceRequest('/api/workspace/delete', 'DELETE', {
+        projectId: project.id,
+        path
+    })
+
+    // Remove deleted file/folder contents from cache.
+    for (const cachedPath of Object.keys(fileCache)) {
+        if (cachedPath === path || cachedPath.startsWith(`${path}/`)) {
+            delete fileCache[cachedPath]
+        }
+    }
+
+    openTabs = openTabs.filter(
+        (tab) => tab.path !== path && !tab.path.startsWith(`${path}/`)
+    )
+
+    if (
+        activeFilePath === path ||
+        activeFilePath.startsWith(`${path}/`)
+    ) {
+        activeFilePath = ''
+
+        if (editorView) {
+            editorView.destroy()
+            editorView = null
+        }
+    }
+
+    await refreshWorkspace()
+}
     // ─────────────────────────────────────────────
     // SCAFFOLD
     // ─────────────────────────────────────────────
