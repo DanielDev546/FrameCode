@@ -1,6 +1,5 @@
 
 <script lang="ts">
-    import DashboardLayout from '$lib/layout/DashboardLayout.svelte'
     import { onMount, onDestroy } from 'svelte'
     import FileExplorer from '$lib/components/ide/FileExplorer.svelte'
     import { EditorState } from '@codemirror/state'
@@ -86,6 +85,55 @@
     let termOpen = $state(true)
 
     let previewMode = $state<'desktop' | 'tablet' | 'mobile'>('desktop')
+    type LayoutMode = 'code' | 'split' | 'preview'
+
+let layoutMode = $state<LayoutMode>('split')
+let splitPercent = $state(62)
+let isResizing = $state(false)
+let workspaceEl = $state<HTMLElement | null>(null)
+
+    // ─────────────────────────────────────────────
+// WORKSPACE RESIZING
+// ─────────────────────────────────────────────
+
+function startResize(event: PointerEvent) {
+    if (!workspaceEl) return
+
+    isResizing = true
+    workspaceEl.setPointerCapture(event.pointerId)
+}
+
+function resizeWorkspace(event: PointerEvent) {
+    if (!isResizing || !workspaceEl) return
+
+    const bounds = workspaceEl.getBoundingClientRect()
+
+    const position =
+        ((event.clientX - bounds.left) / bounds.width) * 100
+
+    splitPercent = Math.min(90, Math.max(10, position))
+}
+
+function stopResize(event: PointerEvent) {
+    isResizing = false
+
+    if (workspaceEl?.hasPointerCapture(event.pointerId)) {
+        workspaceEl.releasePointerCapture(event.pointerId)
+    }
+}
+
+function handleDividerKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        splitPercent = Math.max(10, splitPercent - 2)
+    }
+
+    if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        splitPercent = Math.min(90, splitPercent + 2)
+    }
+}
+
     let previewHtml = $state('')
     let previewKey = $state(0)
 
@@ -103,8 +151,59 @@
     let editorEl = $state<HTMLElement | null>(null)
     let editorView = $state<EditorView | null>(null)
 
-    let termInput = $state('')
-    let termLines = $state<TerminalLine[]>([])
+
+    
+let termInput = $state('')
+let termLines = $state<TerminalLine[]>([])
+let terminalHeight = $state(200)
+let isTerminalResizing = $state(false)
+let mainEl = $state<HTMLElement | null>(null)
+
+// TERMINAL RESIZING
+
+function startTerminalResize(event: PointerEvent) {
+    if (!mainEl || !termOpen) return
+
+    event.preventDefault()
+    isTerminalResizing = true
+    mainEl.setPointerCapture(event.pointerId)
+}
+
+function resizeTerminal(event: PointerEvent) {
+    if (!isTerminalResizing || !mainEl) return
+
+    const bounds = mainEl.getBoundingClientRect()
+    const height = bounds.bottom - event.clientY
+
+    terminalHeight = Math.max(
+        90,
+        Math.min(bounds.height * 0.65, height)
+    )
+}
+
+function stopTerminalResize(event: PointerEvent) {
+    isTerminalResizing = false
+
+    if (mainEl?.hasPointerCapture(event.pointerId)) {
+        mainEl.releasePointerCapture(event.pointerId)
+    }
+}
+
+function handleTerminalDividerKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        terminalHeight = Math.min(
+            (mainEl?.clientHeight ?? 800) * 0.65,
+            terminalHeight + 20
+        )
+    }
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        terminalHeight = Math.max(90, terminalHeight - 20)
+    }
+}
+
 
     let owner = ''
     let repo = ''
@@ -457,37 +556,94 @@ async function deleteEntry(path: string) {
             .replace(/^\s*export\s+(?=(const|let|var|function|class)\b)/gm, '')
     }
 
-    function makeVanillaPreview() {
-        const htmlFile = findPreviewFile('index.html', 'app.html')
-        let htmlContent = htmlFile?.content ?? ''
+   
+function makeVanillaPreview() {
+    const files = previewFiles();
 
-        if (!htmlContent) return ''
+    // Find available HTML files.
+    const htmlFiles = files.filter(({ path }) =>
+        /\.html?$/i.test(path)
+    );
 
-        const cssContent = collectCss()
+    if (!htmlFiles.length) return '';
 
-        if (cssContent) {
-            const style = `<style>${cssContent}</style>`
+    // Prefer the currently active HTML file.
+    const activeHtml = htmlFiles.find(
+        ({ path }) => path === activeFilePath
+    );
 
-            htmlContent = htmlContent.includes('</head>')
-                ? htmlContent.replace('</head>', `${style}</head>`)
-                : style + htmlContent
+    // Otherwise prefer conventional entry files.
+    const htmlFile =
+        activeHtml ??
+        htmlFiles.find(({ path }) => /(^|\/)index\.html$/i.test(path)) ??
+        htmlFiles.find(({ path }) => /(^|\/)app\.html$/i.test(path)) ??
+        htmlFiles.find(({ path }) => /(^|\/)login\.html$/i.test(path)) ??
+        htmlFiles[0];
+
+    let htmlContent = htmlFile.content ?? '';
+
+    if (!htmlContent) return '';
+
+    // Remove local stylesheet references because CSS is injected below.
+    htmlContent = htmlContent.replace(
+        /<link\b(?=[^>]*\brel\s*=\s*["']?stylesheet["']?)[^>]*>/gi,
+        (tag) => {
+            const href = tag.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1];
+
+            if (!href || /^(https?:)?\/\//i.test(href) || href.startsWith('data:')) {
+                return tag;
+            }
+
+            return '';
         }
+    );
 
-        const jsContent = previewFiles()
-            .filter(({ path }) => /\.(js|ts)$/.test(path) && !/\.(jsx|tsx)$/.test(path))
-            .map(({ content }) => content)
-            .join('\n')
+    // Remove local script references because JS is injected below.
+    htmlContent = htmlContent.replace(
+        /<script\b(?=[^>]*\bsrc\s*=)[^>]*>\s*<\/script>/gi,
+        (tag) => {
+            const src = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
 
-        if (jsContent) {
-            const script = `<script type="module">${jsContent}<\/script>`
+            if (!src || /^(https?:)?\/\//i.test(src) || src.startsWith('data:')) {
+                return tag;
+            }
 
-            htmlContent = htmlContent.includes('</body>')
-                ? htmlContent.replace('</body>', `${script}</body>`)
-                : htmlContent + script
+            return '';
         }
+    );
 
-        return htmlContent
+    // Inject workspace CSS.
+    const cssContent = collectCss();
+
+    if (cssContent) {
+        const style = `<style>${cssContent}</style>`;
+
+        htmlContent = htmlContent.includes('</head>')
+            ? htmlContent.replace('</head>', `${style}</head>`)
+            : style + htmlContent;
     }
+
+    // Inject workspace JavaScript.
+    const jsContent = files
+        .filter(({ path }) =>
+            /\.(js)$/i.test(path) &&
+            !/\.(jsx|tsx)$/i.test(path)
+        )
+        .map(({ content }) => content ?? '')
+        .filter(Boolean)
+        .join('\n');
+
+    if (jsContent) {
+        const script = `<script>${jsContent}<\/script>`;
+
+        htmlContent = htmlContent.includes('</body>')
+            ? htmlContent.replace('</body>', `${script}</body>`)
+            : htmlContent + script;
+    }
+
+    return htmlContent;
+}
+
 
     function makeReactPreview() {
         const files = previewFiles().filter(({ path }) => /\.(jsx|tsx|js|ts)$/.test(path))
@@ -957,7 +1113,16 @@ createApp(__component).mount('#app');
                     }
                 ]
             } else {
-                const content = `// ${path}\n`
+               const res = await fetch(
+    `/api/workspace/files?projectId=${encodeURIComponent(project.id)}&path=${encodeURIComponent(path)}`
+);
+
+if (!res.ok) {
+    throw new Error(await res.text());
+}
+
+const result = await res.json();
+const content = result.file?.content ?? "";
 
                 fileCache[path] = content
                 activeFilePath = path
@@ -1085,20 +1250,18 @@ createApp(__component).mount('#app');
     })
 </script>
 
-<DashboardLayout active="ide" {data}>
-    <div class="ide-root fc-app flex h-screen overflow-hidden font-sans select-none">
-
-        <!-- GRID BACKGROUND -->
-        <div
-            class="fixed inset-0 pointer-events-none z-0"
-            style="
-                background-image:
-                    linear-gradient(var(--fc-accent-soft) 1px, transparent 1px),
-                    linear-gradient(90deg, var(--fc-accent-soft) 1px, transparent 1px);
-                background-size: 40px 40px;
-            "
-        ></div>
-
+   <div class="ide-root fc-app flex h-screen overflow-hidden font-sans select-none">
+  <!-- GRID BACKGROUND -->
+  <div
+    class="fixed inset-0 pointer-events-none z-0"
+    style="
+      background-image:
+        linear-gradient(var(--fc-accent-soft) 1px, transparent 1px),
+        linear-gradient(90deg, var(--fc-accent-soft) 1px, transparent 1px);
+      background-size: 40px 40px;
+    "
+  ></div>
+   
         <!-- SIDEBAR -->
         {#if sidebarOpen || mobileSidebarOpen}
             {#if mobileSidebarOpen}
@@ -1145,6 +1308,8 @@ createApp(__component).mount('#app');
                     </div>
                 </div>
 
+            
+
                 <!-- EXPLORER HEADER -->
                 <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--fc-border)]">
                     <p class="font-mono text-[9px] text-[var(--fc-text-muted)] uppercase tracking-[0.2em]">
@@ -1187,8 +1352,14 @@ createApp(__component).mount('#app');
         {/if}
 
         <!-- MAIN -->
-        <div class="relative z-10 flex-1 min-w-0 flex flex-col overflow-hidden">
-
+<div
+    bind:this={mainEl}
+    class="relative z-10 flex-1 min-w-0 flex flex-col overflow-hidden"
+    class:terminal-resizing={isTerminalResizing}
+    onpointermove={resizeTerminal}
+    onpointerup={stopTerminalResize}
+    onpointercancel={stopTerminalResize}
+>
             <!-- MOBILE HEADER -->
             <div class="ide-mobile-header">
                 <button
@@ -1315,25 +1486,62 @@ createApp(__component).mount('#app');
                     </div>
 
                     <!-- RUN -->
-                    <button
-                        type="button"
-                        onclick={runPreview}
-                        class="
-                            font-mono text-[10px] uppercase tracking-[0.08em]
-                            px-3 py-[5px]
-                            border border-[var(--fc-border-strong)]
-                            text-[var(--fc-text-secondary)]
-                            hover:text-[var(--fc-accent)]
-                            hover:border-[var(--fc-accent)]
-                            transition-all mr-2
-                        "
-                    >
-                        ▶ Run
-                    </button>
-                </div>
+                  <!-- WORKSPACE LAYOUT CONTROLS -->
+<div class="flex items-center gap-1 mr-3">
+    <button
+        type="button"
+        class:layout-active={layoutMode === 'code'}
+        class="layout-btn"
+        onclick={() => layoutMode = 'code'}
+        title="Focus code"
+    >
+        <span>⌨</span>
+        Code
+    </button>
 
-                <!-- BREADCRUMB -->
-                <div class="flex items-center justify-between px-4 h-[26px]">
+    <button
+        type="button"
+        class:layout-active={layoutMode === 'split'}
+        class="layout-btn"
+        onclick={() => layoutMode = 'split'}
+        title="Split code and preview"
+    >
+        <span>◫</span>
+        Split
+    </button>
+
+    <button
+        type="button"
+        class:layout-active={layoutMode === 'preview'}
+        class="layout-btn"
+        onclick={() => layoutMode = 'preview'}
+        title="Focus preview"
+    >
+        <span>▣</span>
+        Preview
+    </button>
+</div>
+
+<!-- RUN -->
+<button
+    type="button"
+    onclick={runPreview}
+    class="
+        font-mono text-[10px] uppercase tracking-[0.08em]
+        px-3 py-[5px]
+        border border-[var(--fc-border-strong)]
+        text-[var(--fc-text-secondary)]
+        hover:text-[var(--fc-accent)]
+        hover:border-[var(--fc-accent)]
+        transition-all mr-2
+    "
+>
+    ▶ Run
+</button>
+</div> <!-- ADD THIS: closes the 40px header row -->
+
+<!-- BREADCRUMB -->
+<div class="flex items-center justify-between px-4 h-[26px]">
                     <div class="flex items-center gap-1 font-mono text-[9px] text-[var(--fc-text-muted)]">
                         {#if activeFilePath}
                             {#each activeFilePath.split('/') as part, i}
@@ -1364,70 +1572,107 @@ createApp(__component).mount('#app');
             </header>
 
             <!-- EDITOR + PREVIEW -->
-            <div class="ide-workspace flex-1 min-h-0 flex overflow-hidden">
+            <!-- EDITOR + PREVIEW -->
+<div
+    class="ide-workspace flex-1 min-h-0 flex overflow-hidden"
+    class:workspace-resizing={isResizing}
+    bind:this={workspaceEl}
+    onpointermove={resizeWorkspace}
+    onpointerup={stopResize}
+    onpointercancel={stopResize}
+>
+    <!-- CODEMIRROR -->
+    <div
+        bind:this={editorEl}
+        class="ide-editor min-w-0 overflow-hidden"
+        class:mobile-hidden={mobilePane !== 'editor'}
+        style:flex={layoutMode === 'code'
+            ? '1 1 0%'
+            : layoutMode === 'preview'
+                ? '0 0 0px'
+                : `0 0 calc(${splitPercent}% - 3px)`}
+    ></div>
 
-                <!-- CODEMIRROR -->
-                <div
-                    bind:this={editorEl}
-                    class="ide-editor flex-1 min-w-0 overflow-hidden"
-                    class:mobile-hidden={mobilePane !== 'editor'}
-                ></div>
+    <!-- RESIZABLE DIVIDER -->
+    {#if layoutMode === 'split'}
+        <div
+            class="ide-divider"
+            class:dragging={isResizing}
+            role="separator"
+            aria-label="Resize code and preview panels"
+            aria-orientation="vertical"
+            aria-valuenow={Math.round(splitPercent)}
+            aria-valuemin="10"
+            aria-valuemax="90"
+            tabindex="0"
+            onpointerdown={startResize}
+            onkeydown={handleDividerKeydown}
+            ondblclick={() => splitPercent = 62}
+        >
+            <span></span>
+        </div>
+    {/if}
 
-                <!-- DIVIDER -->
-                <div class="ide-divider w-[1px] bg-[var(--fc-border)] shrink-0"></div>
-
-                <!-- PREVIEW -->
-                <div
-                    class="
-                        ide-preview flex-1 min-w-0
-                        bg-[var(--fc-panel)] flex items-center justify-center
-                        p-3 overflow-hidden
-                    "
-                    class:mobile-hidden={mobilePane !== 'preview'}
-                >
-                    <div
-                        class="
-                            h-full border border-[var(--fc-border-strong)]
-                            overflow-hidden bg-white transition-all duration-300
-                        "
-                        style="width:{previewMode === 'mobile'
-                            ? '375px'
-                            : previewMode === 'tablet'
-                                ? '600px'
-                                : '100%'};max-width:100%;"
-                    >
-                        {#key previewKey}
-                            {#if previewHtml}
-                                <iframe
-                                    srcdoc={previewHtml}
-                                    title="FrameCode Preview"
-                                    class="w-full h-full border-0 bg-white"
-                                    sandbox="allow-scripts"
-                                ></iframe>
-                            {:else}
-                                <div class="w-full h-full flex items-center justify-center bg-[var(--fc-panel)]">
-                                    <p class="font-mono text-[10px] text-[var(--fc-text-muted)] text-center">
-                                        No preview available
-                                        <br />
-                                        <span class="text-[var(--fc-text-subtle)]">
-                                            Open an HTML file and click Run
-                                        </span>
-                                    </p>
-                                </div>
-                            {/if}
-                        {/key}
-                    </div>
-                </div>
-            </div>
+   <!-- PREVIEW -->
+<div
+    class="
+        ide-preview min-w-0
+        bg-[var(--fc-panel)] flex items-center justify-center
+        p-3 overflow-hidden
+    "
+    class:mobile-hidden={mobilePane !== 'preview'}
+    style:flex={layoutMode === 'preview'
+        ? '1 1 0%'
+        : layoutMode === 'code'
+            ? '0 0 0px'
+            : '1 1 0%'}
+>
+    {#if previewHtml}
+        {#key previewKey}
+            <iframe
+                title="Preview"
+                srcdoc={previewHtml}
+                class="w-full h-full bg-white border-0"
+                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+            ></iframe>
+        {/key}
+    {:else}
+        <p class="font-mono text-[11px] text-[var(--fc-text-muted)]">
+            Click ▶ Run to see your preview
+        </p>
+    {/if}
+</div>
+</div>
+     
 
             <!-- TERMINAL -->
-            <div
-                class="
-                    shrink-0 border-t border-[var(--fc-border)]
-                    bg-[var(--fc-panel)] flex flex-col
-                "
-                style="height: {termOpen ? 200 : 32}px;"
-            >
+          
+<!-- TERMINAL RESIZE DIVIDER -->
+{#if termOpen}
+    <div
+        class="terminal-divider"
+        class:dragging={isTerminalResizing}
+        role="separator"
+        aria-label="Resize terminal panel"
+        aria-orientation="horizontal"
+        aria-valuenow={terminalHeight}
+        aria-valuemin="90"
+        tabindex="0"
+        onpointerdown={startTerminalResize}
+        onkeydown={handleTerminalDividerKeydown}
+        ondblclick={() => terminalHeight = 200}
+    >
+        <span></span>
+    </div>
+{/if}
+
+
+<!-- TERMINAL -->
+<div
+    class="shrink-0 border-t border-[var(--fc-border)] bg-[var(--fc-panel)] flex flex-col"
+    style="height: {termOpen ? terminalHeight : 32}px;"
+>
+
                 <div class="shrink-0 h-[32px] flex items-center justify-between px-4 border-b border-[var(--fc-border)]">
                     <div class="flex items-center gap-4">
                         <button
@@ -1495,9 +1740,158 @@ createApp(__component).mount('#app');
                 {/if}
             </div>
         </div>
-    </div>
+        </div>
 
     <style>
+
+
+/* TERMINAL RESIZE DIVIDER */
+
+.terminal-divider {
+    position: relative;
+    z-index: 20;
+    flex: 0 0 5px;
+    height: 5px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--fc-border);
+    cursor: ns-resize;
+    touch-action: none;
+    transition: background 150ms ease;
+}
+
+.terminal-divider::before {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+}
+
+.terminal-divider span {
+    width: 42px;
+    height: 2px;
+    border-radius: 4px;
+    background: var(--fc-text-muted);
+    transition: all 150ms ease;
+}
+
+.terminal-divider:hover,
+.terminal-divider.dragging {
+    background: var(--fc-accent-soft);
+}
+
+.terminal-divider:hover span,
+.terminal-divider.dragging span {
+    width: 64px;
+    height: 3px;
+    background: var(--fc-accent);
+}
+
+.terminal-resizing {
+    cursor: ns-resize;
+    user-select: none;
+}
+
+.terminal-resizing iframe {
+    pointer-events: none;
+}
+
+    /* ─────────────────────────────────
+   WORKSPACE RESIZING
+───────────────────────────────── */
+
+.ide-editor,
+.ide-preview {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.ide-divider {
+    position: relative;
+    z-index: 10;
+    flex: 0 0 6px;
+    width: 6px;
+    height: 100%;
+    background: var(--fc-border);
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    transition: background 150ms ease;
+}
+
+.ide-divider::before {
+    content: '';
+    position: absolute;
+    inset: 0 -4px;
+}
+
+.ide-divider span {
+    width: 2px;
+    height: 34px;
+    border-radius: 3px;
+    background: var(--fc-text-muted);
+    transition: all 150ms ease;
+}
+
+.ide-divider:hover,
+.ide-divider.dragging {
+    background: var(--fc-accent-soft);
+}
+
+.ide-divider:hover span,
+.ide-divider.dragging span {
+    height: 52px;
+    background: var(--fc-accent);
+}
+
+.workspace-resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+
+.workspace-resizing iframe {
+    pointer-events: none;
+}
+
+/* Layout controls */
+
+.layout-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--fc-text-muted);
+    font: 10px monospace;
+    transition: all 150ms ease;
+    white-space: nowrap;
+}
+
+.layout-btn:hover {
+    color: var(--fc-text);
+    background: var(--fc-panel-hover);
+}
+
+.layout-btn.layout-active {
+    color: var(--fc-accent);
+    background: var(--fc-accent-soft);
+    border-color: var(--fc-border-strong);
+}
+
+@media (max-width: 768px) {
+    .ide-divider {
+        display: none;
+    }
+
+    .layout-btn {
+        display: none;
+    }
+}
         .ide-mobile-header,
         .ide-mobile-switcher {
             display: none;
@@ -1646,9 +2040,7 @@ createApp(__component).mount('#app');
                 height: 100% !important;
             }
 
-            .ide-root [style*="height: 200px"] {
-                height: 145px !important;
-            }
+          
         }
 
         @media (max-width: 480px) {
@@ -1656,9 +2048,6 @@ createApp(__component).mount('#app');
                 font-size: 11px !important;
             }
 
-            .ide-root [style*="height: 200px"] {
-                height: 120px !important;
-            }
+           
         }
     </style>
-</DashboardLayout>

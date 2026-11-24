@@ -1,4 +1,97 @@
 <script lang="ts">
+
+  
+let creatingType = $state<'file' | 'folder' | null>(null);
+let creatingParent = $state<string | null>(null);
+let newItemName = $state('');
+let inlineError = $state('');
+let inlineBusy = $state(false);
+
+function startInlineCreate(
+    type: 'file' | 'folder',
+    parentPath = ''
+) {
+    creatingType = type;
+    creatingParent = parentPath;
+    newItemName = '';
+    inlineError = '';
+
+    // Make sure the target folder is expanded.
+    if (parentPath && !expanded.includes(parentPath)) {
+        expanded = [...expanded, parentPath];
+    }
+}
+
+function cancelInlineCreate() {
+    if (inlineBusy) return;
+
+    creatingType = null;
+    creatingParent = null;
+    newItemName = '';
+    inlineError = '';
+}
+
+async function submitInlineCreate() {
+    const name = newItemName.trim();
+
+    if (!creatingType || creatingParent === null) return;
+
+    if (!name) {
+        inlineError = 'Enter a name first.';
+        return;
+    }
+
+    if (
+        name === '.' ||
+        name === '..' ||
+        name.includes('/') ||
+        name.includes('\\')
+    ) {
+        inlineError = 'Enter a valid name without slashes.';
+        return;
+    }
+
+    const type = creatingType;
+    const parent = creatingParent;
+    const path = parent ? `${parent}/${name}` : name;
+
+    inlineBusy = true;
+    inlineError = '';
+
+    try {
+        if (type === 'file') {
+            await onCreateFile(path);
+        } else {
+            await onCreateFolder(path);
+        }
+
+        await onRefresh();
+
+        expandParents(path);
+
+        if (type === 'folder') {
+            expanded = [...new Set([...expanded, path])];
+        }
+
+        creatingType = null;
+        creatingParent = null;
+        newItemName = '';
+        inlineError = '';
+
+        if (type === 'file') {
+            onOpen(path);
+        }
+    } catch (error) {
+        inlineError =
+            error instanceof Error
+                ? error.message
+                : `Could not create ${type}.`;
+    } finally {
+        inlineBusy = false;
+    }
+}
+
+
     type Entry = {
         path: string
         type: 'file' | 'folder'
@@ -260,7 +353,7 @@
             <button
                 type="button"
                 title="New file"
-                onclick={() => openDialog('file')}
+                onclick={() => startInlineCreate('file')}
             >
                 <span class="toolbar-plus">＋</span>
             </button>
@@ -268,7 +361,7 @@
             <button
                 type="button"
                 title="New folder"
-                onclick={() => openDialog('folder')}
+                onclick={() => startInlineCreate('folder')}
             >
                 <span class="toolbar-folder">▱</span>
             </button>
@@ -332,14 +425,15 @@
                         </button>
 
                         <div class="tree-actions">
-                            <button
+                          <button
                                 title="New file inside folder"
-                                onclick={() => openDialog('file', node.path)}
+                             onclick={() => startInlineCreate('file', node.path)}
                             >＋</button>
 
                             <button
                                 title="New folder inside folder"
-                                onclick={() => openDialog('folder', node.path)}
+                      
+                                       onclick={() => startInlineCreate('folder', node.path)}
                             >▱</button>
 
                             <button
@@ -353,6 +447,66 @@
                             >×</button>
                         </div>
                     </div>
+
+                   
+{#if creatingParent === node.path}
+    <div
+        class="tree-create-input"
+        style={`--depth:${depth + 1}`}
+    >
+        <span>{creatingType === 'file' ? '📄' : '📁'}</span>
+
+        <input
+            bind:value={newItemName}
+            placeholder={creatingType === 'file'
+                ? 'New file name...'
+                : 'New folder name...'}
+            disabled={inlineBusy}
+            autofocus
+            onkeydown={(event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitInlineCreate();
+                }
+
+                if (event.key === 'Escape') {
+                    cancelInlineCreate();
+                }
+            }}
+        />
+
+        <button
+            type="button"
+            title="Cancel"
+            onclick={cancelInlineCreate}
+        >×</button>
+    </div>
+
+    {#if inlineError}
+        <p class="inline-create-error">{inlineError}</p>
+    {/if}
+
+
+
+    <div class="tree-create-input">
+        <span>
+            {creatingType === 'file' ? '📄' : '📁'}
+        </span>
+
+        <input
+            bind:value={newItemName}
+            placeholder={creatingType === 'file'
+                ? 'Enter file name...'
+                : 'Enter folder name...'}
+            autofocus
+            onkeydown={(event) => {
+                if (event.key === 'Escape') {
+                    cancelInlineCreate();
+                }
+            }}
+        />
+    </div>
+{/if}
 
                     {#if expanded.includes(node.path)}
                         <div class="tree-children">
@@ -401,19 +555,58 @@
             </div>
         {/snippet}
 
+
+{#if creatingParent === ''}
+    <div class="tree-create-input" style="--depth:0">
+        <span>{creatingType === 'file' ? '📄' : '📁'}</span>
+
+        <input
+            bind:value={newItemName}
+            placeholder={creatingType === 'file'
+                ? 'New file name...'
+                : 'New folder name...'}
+            disabled={inlineBusy}
+            autofocus
+            onkeydown={(event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitInlineCreate();
+                }
+
+                if (event.key === 'Escape') {
+                    cancelInlineCreate();
+                }
+            }}
+        />
+
+        <button
+            type="button"
+            title="Cancel"
+            onclick={cancelInlineCreate}
+        >×</button>
+    </div>
+
+    {#if inlineError}
+        <p class="inline-create-error">{inlineError}</p>
+    {/if}
+{/if}
+
+
         {#each tree as node (node.path)}
             {@render renderNode(node, 0)}
         {/each}
 
-        {#if tree.length === 0}
-            <div class="explorer-empty">
-                <span>▱</span>
-                <p>No files yet</p>
-                <button onclick={() => openDialog('file')}>
-                    Create your first file
-                </button>
-            </div>
-        {/if}
+        
+{#if tree.length === 0 && creatingParent !== ''}
+    <div class="explorer-empty">
+        <span>▱</span>
+        <p>No files yet</p>
+        <button onclick={() => startInlineCreate('file')}>
+            Create your first file
+        </button>
+    </div>
+{/if}
+
     </div>
 
 <!-- DIALOG -->
@@ -517,6 +710,58 @@
 </div>
 
 <style>
+
+.tree-create-input {
+    min-height: 29px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 5px 3px calc(8px + var(--depth) * 14px);
+    background: var(--fc-panel-raised);
+}
+
+.tree-create-input > span {
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.tree-create-input input {
+    flex: 1;
+    min-width: 0;
+    height: 23px;
+    padding: 0 6px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--fc-text);
+    background: var(--fc-panel);
+    border: 1px solid var(--fc-accent);
+    border-radius: 3px;
+    outline: none;
+}
+
+.tree-create-input input::placeholder {
+    color: var(--fc-text-muted);
+}
+
+.tree-create-input button {
+    width: 20px;
+    height: 22px;
+    flex-shrink: 0;
+    color: var(--fc-text-muted);
+    font-size: 15px;
+}
+
+.tree-create-input button:hover {
+    color: #ff6b6b;
+}
+
+.inline-create-error {
+    padding: 3px 8px 3px calc(8px + var(--depth) * 14px);
+    color: #ff8585;
+    font-family: monospace;
+    font-size: 9px;
+}
+
     .explorer {
         height: 100%;
         min-height: 0;
