@@ -163,7 +163,7 @@ async function submitInlineCreate() {
             let current = root
             let parentPath = ''
 
-            parts.forEach((part, index) => {
+           parts.forEach((part: string, index: number) => {
                 parentPath = parentPath
                     ? `${parentPath}/${part}`
                     : part
@@ -394,7 +394,7 @@ async function submitInlineCreate() {
 
         <span class="root-name">PROJECT</span>
 
-        <span class="root-count">{files.filter((f) => f.type === 'file').length}</span>
+        <span class="root-count">{files.filter((f: Entry) => f.type === 'file').length}</span>
     </button>
 
     <!-- TREE -->
@@ -488,24 +488,7 @@ async function submitInlineCreate() {
 
 
 
-    <div class="tree-create-input">
-        <span>
-            {creatingType === 'file' ? '📄' : '📁'}
-        </span>
-
-        <input
-            bind:value={newItemName}
-            placeholder={creatingType === 'file'
-                ? 'Enter file name...'
-                : 'Enter folder name...'}
-            autofocus
-            onkeydown={(event) => {
-                if (event.key === 'Escape') {
-                    cancelInlineCreate();
-                }
-            }}
-        />
-    </div>
+    
 {/if}
 
                     {#if expanded.includes(node.path)}
@@ -587,7 +570,12 @@ async function submitInlineCreate() {
     </div>
 
     {#if inlineError}
-        <p class="inline-create-error">{inlineError}</p>
+        <p
+    class="inline-create-error"
+    style={`--depth:${depth + 1}`}
+>
+    {inlineError}
+</p>
     {/if}
 {/if}
 
@@ -597,7 +585,7 @@ async function submitInlineCreate() {
         {/each}
 
         
-{#if tree.length === 0 && creatingParent !== ''}
+{#if tree.length === 0 && creatingParent === null}
     <div class="explorer-empty">
         <span>▱</span>
         <p>No files yet</p>
@@ -710,6 +698,12 @@ async function submitInlineCreate() {
 </div>
 
 <style>
+.inline-create-error {
+    padding: 3px 8px 3px calc(8px + var(--depth) * 14px);
+    color: #ff8585;
+    font-family: monospace;
+    font-size: 9px;
+}
 
 .tree-create-input {
     min-height: 29px;

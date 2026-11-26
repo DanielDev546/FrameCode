@@ -214,7 +214,7 @@
     <!-- GITHUB IMPORT -->
     <button
         class="action-card"
-        onclick={importFromGitHub}
+        onclick={importFromGithub}
     >
         <div class="action-index">
             <span>02</span>
@@ -294,7 +294,7 @@
 <!-- LOCAL PROJECT -->
 <button
     class="local-project"
-    onclick={handleOpenLocalFolder}
+    onclick={openFolderPicker}
 >
     <div class="local-project-icon">
         <svg viewBox="0 0 24 24" fill="none"

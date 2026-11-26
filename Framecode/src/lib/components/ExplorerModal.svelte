@@ -103,7 +103,7 @@
                     class="font-mono text-sm font-semibold
                            text-[var(--fc-text)]"
                 >
-                    {titles[mode]}
+                    {descriptions[mode]}
                 </h2>
 
                 <p class="mt-1 text-xs text-[var(--fc-text-muted)]">
