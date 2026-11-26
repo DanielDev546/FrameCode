@@ -1,5 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+	    import '@fontsource-variable/inter';
+
 
 
    </script>    

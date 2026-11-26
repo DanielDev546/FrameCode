@@ -42,7 +42,7 @@
     import { html } from '@codemirror/lang-html'
     import { json } from '@codemirror/lang-json'
     import { markdown } from '@codemirror/lang-markdown'
-
+    import { VirtualFileResolver } from '$lib/ide/VirtualFileResolver'
 
    
 
@@ -84,6 +84,13 @@
 
     let termOpen = $state(true)
 
+    let previewPagePath = $state('')
+let previewHistory = $state<string[]>([])
+let previewHistoryIndex = $state(-1)
+
+let previewFrame = $state<HTMLIFrameElement | null>(null)
+let previewResolver: VirtualFileResolver | null = null
+
     let previewMode = $state<'desktop' | 'tablet' | 'mobile'>('desktop')
     type LayoutMode = 'code' | 'split' | 'preview'
 
@@ -91,6 +98,63 @@ let layoutMode = $state<LayoutMode>('split')
 let splitPercent = $state(62)
 let isResizing = $state(false)
 let workspaceEl = $state<HTMLElement | null>(null)
+
+
+    async function loadPreviewFile(path: string): Promise<string | null> {
+    if (fileCache[path] !== undefined) {
+        return fileCache[path]
+    }
+
+    try {
+        let content = ''
+
+        if (hasGitHub) {
+            const res = await fetch(
+                `/api/ide/file?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`
+            )
+
+            if (!res.ok) return null
+
+            const result = await res.json()
+            content = typeof result.content === 'string'
+                ? result.content
+                : ''
+        } else {
+            const res = await fetch(
+                `/api/workspace/files?projectId=${encodeURIComponent(project.id)}&path=${encodeURIComponent(path)}`
+            )
+
+            if (!res.ok) return null
+
+            const result = await res.json()
+            content = result.file?.content ?? ''
+        }
+
+        fileCache[path] = content
+        return content
+    } catch (error) {
+        console.error('[Preview] Failed to load:', path, error)
+        return null
+    }
+}
+async function preparePreviewFiles() {
+    const paths = fileTree.map(file => file.path)
+
+    await Promise.all(
+        paths
+            .filter(path =>
+                /\.(html?|css|scss|js)$/i.test(path)
+            )
+            .map(path => loadPreviewFile(path))
+    )
+
+    previewResolver = new VirtualFileResolver(
+        Object.entries(fileCache).map(([path, content]) => ({
+            path,
+            content
+        }))
+    )
+}
 
     // ─────────────────────────────────────────────
 // WORKSPACE RESIZING
@@ -552,97 +616,201 @@ async function deleteEntry(path: string) {
         return source
             .replace(/^\s*import[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
             .replace(/^\s*import\s+['"][^'"]+['"];?\s*$/gm, '')
-            .replace(/^\s*export\s+default\s+/gm, '')
+            .replace(/^\s*aexport\s+default\s+/gm, '')
             .replace(/^\s*export\s+(?=(const|let|var|function|class)\b)/gm, '')
     }
 
-   
-function makeVanillaPreview() {
-    const files = previewFiles();
 
-    // Find available HTML files.
-    const htmlFiles = files.filter(({ path }) =>
-        /\.html?$/i.test(path)
-    );
 
-    if (!htmlFiles.length) return '';
+async function makeVanillaPreview(path?: string): Promise<string> {
+    await preparePreviewFiles()
 
-    // Prefer the currently active HTML file.
-    const activeHtml = htmlFiles.find(
-        ({ path }) => path === activeFilePath
-    );
+    if (!previewResolver) return ''
 
-    // Otherwise prefer conventional entry files.
-    const htmlFile =
-        activeHtml ??
-        htmlFiles.find(({ path }) => /(^|\/)index\.html$/i.test(path)) ??
-        htmlFiles.find(({ path }) => /(^|\/)app\.html$/i.test(path)) ??
-        htmlFiles.find(({ path }) => /(^|\/)login\.html$/i.test(path)) ??
-        htmlFiles[0];
+    // Find available HTML pages.
+    const htmlFiles = previewResolver
+        .getPaths()
+        .filter(file => /\.html?$/i.test(file))
 
-    let htmlContent = htmlFile.content ?? '';
-
-    if (!htmlContent) return '';
-
-    // Remove local stylesheet references because CSS is injected below.
-    htmlContent = htmlContent.replace(
-        /<link\b(?=[^>]*\brel\s*=\s*["']?stylesheet["']?)[^>]*>/gi,
-        (tag) => {
-            const href = tag.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1];
-
-            if (!href || /^(https?:)?\/\//i.test(href) || href.startsWith('data:')) {
-                return tag;
-            }
-
-            return '';
-        }
-    );
-
-    // Remove local script references because JS is injected below.
-    htmlContent = htmlContent.replace(
-        /<script\b(?=[^>]*\bsrc\s*=)[^>]*>\s*<\/script>/gi,
-        (tag) => {
-            const src = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
-
-            if (!src || /^(https?:)?\/\//i.test(src) || src.startsWith('data:')) {
-                return tag;
-            }
-
-            return '';
-        }
-    );
-
-    // Inject workspace CSS.
-    const cssContent = collectCss();
-
-    if (cssContent) {
-        const style = `<style>${cssContent}</style>`;
-
-        htmlContent = htmlContent.includes('</head>')
-            ? htmlContent.replace('</head>', `${style}</head>`)
-            : style + htmlContent;
-    }
-
-    // Inject workspace JavaScript.
-    const jsContent = files
-        .filter(({ path }) =>
-            /\.(js)$/i.test(path) &&
-            !/\.(jsx|tsx)$/i.test(path)
+    const entryPath =
+        path ??
+        (
+            htmlFiles.includes(activeFilePath)
+                ? activeFilePath
+                : htmlFiles.find(file => /(^|\/)index\.html$/i.test(file))
+                    ?? htmlFiles[0]
         )
-        .map(({ content }) => content ?? '')
-        .filter(Boolean)
-        .join('\n');
 
-    if (jsContent) {
-        const script = `<script>${jsContent}<\/script>`;
+    if (!entryPath) return ''
 
-        htmlContent = htmlContent.includes('</body>')
-            ? htmlContent.replace('</body>', `${script}</body>`)
-            : htmlContent + script;
+    const originalHtml = previewResolver.get(entryPath)
+
+    if (originalHtml === undefined) return ''
+
+    let html = originalHtml
+
+    // Construct script tags safely for Svelte.
+    const scriptOpenTag = '<scr' + 'ipt>'
+    const closingScriptTag = '</scr' + 'ipt>'
+
+    // Prevent injected content from prematurely closing HTML elements.
+    const escapeStyleContent = (content: string): string =>
+        content.replace(/<\/style/gi, '<\\/style')
+
+    const escapeScriptContent = (content: string): string =>
+        content.replace(/<\/script/gi, '<\\/script')
+
+    // -----------------------------------------
+    // LOAD PAGE-SPECIFIC CSS
+    // -----------------------------------------
+
+    const linkPattern =
+        /<link\b(?=[^>]*\brel\s*=\s*["']?stylesheet["']?)[^>]*>/gi
+
+    const links = [...html.matchAll(linkPattern)]
+
+    for (const match of links) {
+        const tag = match[0]
+
+        const href = tag.match(
+            /\bhref\s*=\s*["']([^"']+)["']/i
+        )?.[1]
+
+        if (!href) continue
+
+        const resolved = previewResolver.resolve(entryPath, href)
+
+        // External stylesheets remain unchanged.
+        if (!resolved) continue
+
+        const css = await loadPreviewFile(resolved)
+
+        if (css === null) continue
+
+        const media = tag.match(
+            /\bmedia\s*=\s*["']([^"']+)["']/i
+        )?.[1]
+
+        const replacement =
+            `<style data-fc-source="${resolved}"` +
+            (media ? ` media="${media}"` : '') +
+            `>\n${escapeStyleContent(css)}\n</style>`
+
+        html = html.replace(tag, replacement)
     }
 
-    return htmlContent;
+    // -----------------------------------------
+    // LOAD PAGE-SPECIFIC JAVASCRIPT
+    // -----------------------------------------
+
+    const scriptPattern =
+        /<script\b([^>]*?)\bsrc\s*=\s*["']([^"']+)["']([^>]*)>\s*<\/script>/gi
+
+    const scripts = [...html.matchAll(scriptPattern)]
+
+    for (const match of scripts) {
+        const tag = match[0]
+        const src = match[2]
+
+        const resolved = previewResolver.resolve(entryPath, src)
+
+        // External scripts remain unchanged.
+        if (!resolved) continue
+
+        const js = await loadPreviewFile(resolved)
+
+        if (js === null) continue
+
+        // Preserve script attributes such as type="module".
+        const attributes = `${match[1]} ${match[3]}`
+            .replace(/\bsrc\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\basync\b/gi, '')
+            .replace(/\bdefer\b/gi, '')
+            .trim()
+
+        const replacement =
+            `<script ${attributes} data-fc-source="${resolved}">\n` +
+            `${escapeScriptContent(js)}\n` +
+            closingScriptTag
+
+        html = html.replace(tag, replacement)
+    }
+
+    // -----------------------------------------
+    // FRAMECODE PREVIEW NAVIGATION BRIDGE
+    // -----------------------------------------
+
+    const bridge = `
+${scriptOpenTag}
+(() => {
+    const currentPath = ${JSON.stringify(entryPath)};
+
+    function isExternal(href) {
+        return /^(https?:|mailto:|tel:|javascript:|data:|blob:|\\/\\/)/i.test(href);
+    }
+
+    document.addEventListener('click', (event) => {
+        const anchor = event.target instanceof Element
+            ? event.target.closest('a[href]')
+            : null;
+
+        if (!anchor) return;
+
+        if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.shiftKey ||
+            event.altKey ||
+            anchor.target === '_blank' ||
+            anchor.hasAttribute('download')
+        ) {
+            return;
+        }
+
+        const href = anchor.getAttribute('href');
+
+        if (!href || isExternal(href)) return;
+
+        let target;
+
+        try {
+            target = new URL(
+                href,
+                'https://framecode.local/' + currentPath
+            );
+        } catch {
+            return;
+        }
+
+        if (target.origin !== 'https://framecode.local') return;
+
+        event.preventDefault();
+
+        parent.postMessage({
+            type: 'FC_PREVIEW_NAVIGATE',
+            href: target.pathname + target.search + target.hash,
+            from: currentPath
+        }, '*');
+    });
+})();
+${closingScriptTag}
+`
+
+    // Inject the navigation bridge into the current page.
+    if (/<\/body>/i.test(html)) {
+        html = html.replace(
+            /<\/body>/i,
+            `${bridge}</body>`
+        )
+    } else {
+        html += bridge
+    }
+
+    return html
 }
+
 
 
     function makeReactPreview() {
@@ -832,10 +1000,24 @@ createApp(__component).mount('#app');
         } else if (framework.includes('astro')) {
             html = makeAstroPreview()
             previewLabel = '✓ Astro static preview started'
-        } else {
-            html = makeVanillaPreview()
-            previewLabel = '✓ HTML/CSS/JS preview started'
-        }
+      } else {
+    await preparePreviewFiles()
+
+    const htmlFiles = previewResolver?.getPaths()
+        .filter(path => /\.html?$/i.test(path)) ?? []
+
+    const entryPath =
+        htmlFiles.includes(activeFilePath)
+            ? activeFilePath
+            : htmlFiles.find(path => /(^|\/)index\.html$/i.test(path))
+                ?? htmlFiles[0]
+
+    if (entryPath) {
+        await navigatePreview(entryPath)
+        previewLabel = '✓ HTML/CSS/JS preview started'
+        html = previewHtml
+    }
+}
 
         if (framework.includes('tailwind') && html) {
             const tailwind = '<script src="https://cdn.tailwindcss.com"><\/script>'
@@ -1630,17 +1812,45 @@ const content = result.file?.content ?? "";
     {#if previewHtml}
         {#key previewKey}
             <iframe
-                title="Preview"
-                srcdoc={previewHtml}
-                class="w-full h-full bg-white border-0"
-                sandbox="allow-scripts allow-forms allow-modals allow-popups"
-            ></iframe>
+    bind:this={previewFrame}
+    title="FrameCode Preview"
+    srcdoc={previewHtml}
+    class="w-full h-full bg-white border-0"
+    sandbox="allow-scripts allow-forms allow-modals allow-popups"
+></iframe>
         {/key}
     {:else}
         <p class="font-mono text-[11px] text-[var(--fc-text-muted)]">
             Click ▶ Run to see your preview
         </p>
     {/if}
+    <div class="flex items-center gap-1">
+    <button
+        type="button"
+        onclick={previewBack}
+        disabled={previewHistoryIndex <= 0}
+        title="Previous page"
+    >
+        ←
+    </button>
+
+    <button
+        type="button"
+        onclick={previewForward}
+        disabled={previewHistoryIndex >= previewHistory.length - 1}
+        title="Next page"
+    >
+        →
+    </button>
+
+    <button
+        type="button"
+        onclick={refreshPreview}
+        title="Refresh preview"
+    >
+        ↻
+    </button>
+</div>
 </div>
 </div>
      

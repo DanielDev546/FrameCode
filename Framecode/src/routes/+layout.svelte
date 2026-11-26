@@ -1,6 +1,7 @@
 
 <script lang="ts">
     import { onMount, setContext } from 'svelte';
+    import '@fontsource-variable/inter';
     import '../app.css';
 
     import LoadingScreen from '$lib/LoadingScreen.svelte';
