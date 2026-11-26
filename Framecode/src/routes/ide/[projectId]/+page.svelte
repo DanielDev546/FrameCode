@@ -42,8 +42,7 @@
     import { html } from '@codemirror/lang-html'
     import { json } from '@codemirror/lang-json'
     import { markdown } from '@codemirror/lang-markdown'
-    import { VirtualFileResolver } from '$lib/ide/VirtualFileResolver'
-
+import { VirtualFileResolver } from '$lib/ide/VirtualFileResolver'
    
 
 
